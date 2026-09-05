@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="default">
+    <include><uri>model://sun</uri></include>
+    <include><uri>model://ground_plane</uri></include>
+
+    <!--
+      Buraya model.sdf içindeki <model name="ika_rover">...</model> bloğunun
+      tamamı gömülecek. Bunu otomatik yapmak için (model.sdf'i düzenledikten
+      sonra her seferinde) şu komutu kullanın:
+
+      {
+      echo '<?xml version="1.0"?>'
+      echo '<sdf version="1.6">'
+      echo '  <world name="default">'
+      echo '    <include><uri>model://sun</uri></include>'
+      echo '    <include><uri>model://ground_plane</uri></include>'
+      sed -n '/<model /,/<\/model>/p' ~/.gazebo/models/ika_rover/model.sdf
+      echo '  </world>'
+      echo '</sdf>'
+      } > ~/ika_rover.world
+
+      Neden <include> değil de gömme (embed)? Çünkü <include> ile eklenen
+      modeller, Gazebo'nun manuel Insert menüsüyle eklenen modeller gibi
+      isim çakışması sorununa (otomatik "_0" eki) yol açabiliyor - bkz.
+      Modül 2 README'sindeki "Hata #2".
+
+      Modül 4'teki renkli kutuları ve Modül 5'teki AprilTag'i eklemek için
+      </world></sdf> kapanışından ÖNCE, ilgili modüllerin README'lerindeki
+      <model name="red_box">...</model> vb. bloklarını ve
+      <include><uri>model://apriltag_0</uri>...</include> satırını buraya
+      ekleyin.
+    -->
+
+  </world>
+</sdf>
