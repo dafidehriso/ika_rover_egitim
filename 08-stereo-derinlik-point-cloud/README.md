@@ -1,5 +1,7 @@
 # Modül 8: Stereo Derinlik ve Point Cloud
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (README_EN.md)](README_EN.md)
+
 ## Öğrenme Hedefleri
 1. İki monoküler kameradan (stereo çift) derinlik ve disparity (ayrıklık) kavramını anlamak.
 2. `camera_info` topic'inden intrinsics ($K$ matrisi) okumak.

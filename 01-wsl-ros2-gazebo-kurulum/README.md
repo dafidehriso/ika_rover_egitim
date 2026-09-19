@@ -1,5 +1,7 @@
 # Modül 1: WSL2 + ROS 2 + Gazebo Kurulumu
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (README_EN.md)](README_EN.md)
+
 ## Neden WSL2, Neden Docker Değil?
 
 Gazebo gibi bir 3D simülatör **GUI (grafik arayüzü)** gerektirir. Docker container'ların kendi ekranı olmadığı için GUI göstermek üzere ekstra bir X server (VcXsrv gibi) kurup karmaşık ayarlar yapmanız gerekir.

@@ -1,5 +1,7 @@
 # Modül 10: 3D Haritalama (OctoMap)
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (README_EN.md)](README_EN.md)
+
 ## Durum: TAMAMLANDI (kalite ve doğrulama ince ayarı ileride sürebilir)
 
 ## Önkoşullar ve Paket Kurulumu

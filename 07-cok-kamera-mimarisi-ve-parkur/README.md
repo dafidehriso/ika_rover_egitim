@@ -1,5 +1,7 @@
 # Modül 7: Çoklu Kamera Mimarisi ve Gerçekçi Test Parkuru
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (README_EN.md)](README_EN.md)
+
 ## Öğrenme Hedefleri
 1. Tek kameralı robot modelini 5 kameralı çevre görüş mimarisine (stereo çift + yan/arka mono kameralar) genişletmek.
 2. SLAM'de döngü kapanması (loop closure) testi yapabilecek kapalı koridor parkurunu Gazebo materyalleriyle inşa etmek.

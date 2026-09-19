@@ -1,5 +1,7 @@
 # Modül 9: 2D SLAM (slam_toolbox)
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (README_EN.md)](README_EN.md)
+
 ## Öğrenme Hedefleri
 1. Eşzamanlı Konumlandırma ve Haritalama (SLAM) kavramını ve döngü kapanması (loop closure) mekanizmasını anlamak.
 2. SDF tabanlı robotlarda TF yayın eksikliğini teşhis edip `static_transform_publisher` ile çözmek.

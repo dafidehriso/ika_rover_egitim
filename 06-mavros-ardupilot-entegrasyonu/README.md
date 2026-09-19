@@ -1,5 +1,7 @@
 # Modül 6: MAVROS + ArduPilot Entegrasyonu
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (README_EN.md)](README_EN.md)
+
 ## Neden Bu Modül?
 
 Gerçek bir Pixhawk tabanlı İKA'da (İnsansız Kara Aracı) mimari iki ana katmandan oluşur:

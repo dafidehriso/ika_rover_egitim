@@ -1,5 +1,7 @@
 # Modül 11: Denge ve Fizik Düzeltmeleri
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (README_EN.md)](README_EN.md)
+
 ## Durum: KISMEN TAMAMLANDI
 Ön caster denge düzeltmesi tamamlandı ve test edildi. Rampa matematiksel geometrisi hesaplanarak world dosyasına işlendi; ancak robotun gerçek sürüşle rampadan pürüzsüz geçişi henüz görsel/fiziksel olarak doğrulanmamıştır (bir sonraki oturumda doğrulanacaktır).
 

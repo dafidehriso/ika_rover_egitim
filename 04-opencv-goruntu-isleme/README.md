@@ -1,5 +1,7 @@
 # Modül 4: OpenCV ile Görüntü İşleme
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (README_EN.md)](README_EN.md)
+
 ## OpenCV Nedir, Kısaca
 
 Görüntü işleme için kullanılan bir kütüphane. Python'da bir görüntü, temelde bir **sayı dizisi (numpy array)** — her piksel, renk değerlerinden (kırmızı, yeşil, mavi) oluşan sayılar. OpenCV, bu sayı dizileri üzerinde filtreleme, kenar bulma, renk tespiti gibi işlemler yapmanızı sağlıyor.

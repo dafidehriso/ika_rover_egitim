@@ -1,5 +1,7 @@
 # Tüm Hatalar ve Çözümleri — Hızlı Referans
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (TROUBLESHOOTING.md)](TROUBLESHOOTING.md)
+
 Bu dosya, kurs boyunca karşılaştığımız her hatayı tek bir yerden aranabilir hale getiriyor. Detaylı açıklamalar için ilgili modülün README'sine bakın.
 
 | Hata Belirtisi | Kontrol / Kök Sebep | Çözüm | Modül |
@@ -23,7 +25,7 @@ Bu dosya, kurs boyunca karşılaştığımız her hatayı tek bir yerden aranabi
 | `tag_follower` tag'i gördüğü halde robot hiç hareket etmiyor | `use_sim_time:=true` verilmediği için sistem saati ile simülasyon saati uyuşmuyor | `--ros-args -p use_sim_time:=true` parametresiyle çalıştırın | [05](./05-apriltag-ile-konum-tespiti) |
 | TF sorgusunda `camera_optical_frame` bulunamadı hatası | Temel SDF robotunda `camera_link` tanımlı, optik eksen TF'i eksik | `static_transform_publisher 0 0 0 -1.5708 0 -1.5708 camera_link camera_optical_frame` yayınlayın | [05](./05-apriltag-ile-konum-tespiti) |
 | `mavproxy.py: command not found` | `~/.local/bin` PATH'e ekli değil | `export PATH="$PATH:$HOME/.local/bin"` ekleyip `source ~/.bashrc` | [06](./06-mavros-ardupilot-entegrasyonu) |
-| ArduPilot robot döndükten sonra ileri komutunda kuzeye kayıyor | Gazebo gövde FLU kullanırken MAVROS varsayılanı LOCAL_NED kullanıyor | `ros2 param set /mavros setpoint_velocity.mav_frame BODY_NED` ile gövde eksenini ayarlayın | [06](./06-mavros-ardupilot-entegrasyonu) |
+| ArduPilot robot döndükten sonra ileri komutunda kuzeye kayıyor | Gazebo gövde FLU kullanırken MAVROS varsayılanı LOCAL_NED kullanıyor | `ros2 param set /mavros/setpoint_velocity mav_frame BODY_NED` ile gövde eksenini ayarlayın | [06](./06-mavros-ardupilot-entegrasyonu) |
 | `parkur.world` başlatıldığında kamera veya lidar topic'leri görünmüyor | Dünya dosyasında robot modeli eksik veya spawn edilmemiş | `parkur.world` içine robot modelini ekleyin veya `spawn_entity.py` ile ekleyin | [07](./07-cok-kamera-mimarisi-ve-parkur) |
 | Gazebo/Rockwall dokusu hiç görünmedi / materyal çalışmıyor | Materyal ismi var sanılıp doğrulanmadan kullanılmış, texture eksik/bozuk | `awk`/`grep` ile gazebo.material script'inde texture_unit kontrolü yapın | [07](./07-cok-kamera-mimarisi-ve-parkur) |
 | Periyodik doku (CeilingTiled) stereo eşleştirmeyi bozuyor | Tekrarlayan kare desen stereo eşleştirmede çoklu yanlış eşleşmeye yol açıyor | Organik/düzensiz doku (Grass gibi) tercih edin | [07](./07-cok-kamera-mimarisi-ve-parkur), [08](./08-stereo-derinlik-point-cloud) |
@@ -120,15 +122,15 @@ Bu uyarı tek bir nedene bağlı değildir; aşağıdaki 4 kontrolü sırayla ya
 - **Belirti:** Modül 10'da `ros2 launch camera_vision ika_mapping.launch.py` çalıştırıldığında `Package 'camera_vision' not found` veya eklenti/filtre node'ları bulunamıyor hatası.
 - **Kontrol:** `ros2 pkg prefix camera_vision` çıktısının `~/ika_ws/install/camera_vision` gösterip göstermediğine bakın.
 - **Olası Neden:** Modül 4'te oluşturulan temel paket sadece tek bir viewer dosyası içerir. Depodaki tam teşekküllü `camera_vision` paketi ise launch, RViz konfigürasyonu, SDF robot modeli ve stereo/depth filtre node'larını barındırır.
-- **Çözüm:** Çalışma alanındaki eski paketi silip depodaki tam pakete sembolik link verin (`ln -s ~/ika_rover_egitim/camera_vision ~/ika_ws/src/camera_vision`), ardından `colcon build --packages-select camera_vision` ve `source install/setup.bash` uygulayın ([Modül 10](./10-3d-haritalama-octomap)).
+- **Çözüm:** Çalışma alanındaki eski paketi çalışma alanı dışına yedekleyip (`mv camera_vision ~/ika_backups/...`) depodaki tam pakete sembolik link verin (`ln -s ~/ika_rover_egitim/camera_vision ~/ika_ws/src/camera_vision`), ardından `colcon build --packages-select camera_vision` ve `source install/setup.bash` uygulayın ([Modül 10](./10-3d-haritalama-octomap)).
 
 ---
 
 ### 9. MAVROS Hız Eksen Uyuşmazlığı (`LOCAL_NED` vs `BODY_NED`)
 - **Belirti:** Robot yönünü çevirdikten (örneğin doğuya döndükten) sonra verilen ileri hız komutunda ileri gitmek yerine sola/kuzeye doğru sapar.
-- **Kontrol:** `ros2 param get /mavros setpoint_velocity.mav_frame`
-- **Olası Neden:** MAVROS varsayılan olarak `LOCAL_NED` (harita kuzey-doğu-aşağı) eksenindedir. Robotun burnunun baktığı yönü takip etmesi için hız vektörünün gövde ekseninde (`BODY_NED`) yorumlanması şarttır.
-- **Çözüm:** MAVROS ayağa kalktıktan sonra `ros2 param set /mavros setpoint_velocity.mav_frame BODY_NED` komutunu verin ([Modül 6](./06-mavros-ardupilot-entegrasyonu)).
+- **Kontrol:** `ros2 node list | grep setpoint_velocity` ile düğümü bulun ve `ros2 param get /mavros/setpoint_velocity mav_frame` çalıştırın.
+- **Olası Neden:** MAVROS varsayılan olarak `LOCAL_NED` (harita kuzey-doğu-aşağı) eksenindedir. Robotun burnunun baktığı yönü takip etmesi için hız vektörünün gövde ekseninde (`BODY_NED`) yorumlanması şarttır. Eklenti callback fonksiyonu `header.frame_id` değerini kullanmaz; dönüşümü doğrudan bu parametre belirler.
+- **Çözüm:** MAVROS ayağa kalktıktan sonra `ros2 param set /mavros/setpoint_velocity mav_frame BODY_NED` komutunu verin ([Modül 6](./06-mavros-ardupilot-entegrasyonu)).
 
 ---
 

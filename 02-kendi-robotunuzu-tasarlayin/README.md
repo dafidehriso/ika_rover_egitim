@@ -1,5 +1,7 @@
 # Modül 2: Kendi Robotunuzu Tasarlayın
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (README_EN.md)](README_EN.md)
+
 ## Neden Hazır Bir Modelle (TurtleBot3) Başlayıp Sonra Kendi Modelinize Geçiyoruz?
 
 Hazır modeller (TurtleBot3 gibi) ROS/Gazebo'nun genel işleyişini hızlıca test etmek için harika, ama "kendi projeniz" dediğinizde gerçekten sizin tasarladığınız bir şey olması gerekir. Bu modülde, **SDF (Simulation Description Format)** kullanarak sıfırdan bir robot modeli inşa ediyoruz: kutu gövde, 2 tekerlek, bir denge tekeri (caster), IMU, lidar ve kamera sensörleri.

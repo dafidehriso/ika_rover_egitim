@@ -1,5 +1,7 @@
 # Modül 5: AprilTag ile Konum Tespiti
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (README_EN.md)](README_EN.md)
+
 ## AprilTag Nedir?
 
 Kare şeklinde, özel matematiksel bit desenli bir görsel işaret (QR koda benzer ama daha basit). Kameranın bu işareti görüp, işaretin **fiziksel boyutunu zaten bildiği için**, görüntüde ne kadar büyük/eğik göründüğüne bakarak **kameraya göre tam 3 boyutlu konumunu ve açısını** geometrik olarak hesaplayabilmesini sağlıyor.

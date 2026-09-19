@@ -1,5 +1,7 @@
 # İKA Kursu: Sıfırdan Windows'ta ROS 2 + Gazebo ile Otonom İnsansız Kara Aracı Simülasyonu
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (README_EN.md)](README_EN.md)
+
 Bu depo, **Windows 11 + WSL2** üzerinde, hiç Linux/ROS deneyimi olmayan birinin bile takip edip **kendi otonom robot simülasyonunu** kurabileceği, adım adım, hatasıyla-çözümüyle anlatılmış tam bir eğitim serisidir.
 
 Gerçek bir öğrenme sürecinin (deneme-yanılma, hata alma, hatayı anlama, çözme) birebir kaydı olduğu için, "her şey ilk seferde mükemmel çalıştı" diyen kurslardan farklı: **karşılaşacağınız gerçek hataları ve bunları nasıl teşhis edip çözdüğümüzü** de görüyorsunuz.

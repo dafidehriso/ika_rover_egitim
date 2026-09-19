@@ -1,5 +1,7 @@
 # Modül 3: Engelden Kaçma Algoritması
 
+> 🌐 **Dil / Language:** **Türkçe** | [English Version (README_EN.md)](README_EN.md)
+
 ## Konsept: ROS 2 Node Nedir?
 
 Bir **node**, ROS 2'de tek bir işi yapan bağımsız bir programdır. Node'lar birbirleriyle **topic**'ler üzerinden konuşur: biri bir topic'e veri **yayınlar (publish)**, biri o topic'i **dinler (subscribe)**. Bu modülde yazacağımız node:
