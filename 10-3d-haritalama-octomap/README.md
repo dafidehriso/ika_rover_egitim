@@ -80,8 +80,14 @@ Aşağıdaki adımları sırayla uygulayarak depodaki hazır paketi ROS 2 çalı
 # 1. ROS 2 çalışma alanınızın kaynak dizinine geçin:
 cd ~/ika_ws/src
 
-# 2. Modül 4'teki temel paketi depodaki tam paketle güncelleyin (Sembolik Link Tavsiye Edilir):
-rm -rf camera_vision
+# 2. Öğrencinin Modül 4'teki önceki çalışmalarını korumak için mevcut paketi ROS çalışma alanı DIŞINA benzersiz bir yedek dizinine taşıyın:
+# (ÖNEMLİ: Paket ROS workspace içinde bırakılırsa colcon aynı isimde çift paket algılayıp çakışma hatası verir)
+mkdir -p ~/ika_backups
+if [ -e "camera_vision" ]; then
+    mv camera_vision ~/ika_backups/camera_vision_backup_$(date +%Y%m%d_%H%M%S)
+fi
+
+# 3. Depodaki tam teşekküllü paketi çalışma alanına bağlayın (Sembolik Link Tavsiye Edilir):
 ln -s ~/ika_rover_egitim/camera_vision ~/ika_ws/src/camera_vision
 # (Alternatif kopyalama yöntemi: cp -r ~/ika_rover_egitim/camera_vision ~/ika_ws/src/)
 

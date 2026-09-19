@@ -21,10 +21,12 @@ Bu modülde kurulan yapı, **MAVLink komut iletimi gösterimidir**. Ortak bir fi
 
 ### 2. Koordinat ve Frame Farkı (Gövde FLU vs Yerel NED/ENU)
 - **Gazebo `/cmd_vel`:** Doğrudan robotun gövde çerçevesinde (`base_link` - FLU: Forward, Left, Up) yorumlanır. `linear.x = 1.0` daima robotun burnunun baktığı yönde ileri git demektir.
-- **MAVROS `/mavros/setpoint_velocity/cmd_vel_unstamped`:**
-  - MAVROS `apm_config.yaml` dosyasında `setpoint_velocity.mav_frame` varsayılan olarak **`LOCAL_NED`** (North-East-Down) kullanır. ROS tarafındaki hızları yerel harita koordinatlarına (ENU) göre yorumlar.
+- **MAVROS Hız Komutları (`/mavros/setpoint_velocity/cmd_vel_unstamped` veya `cmd_vel`):**
+  - MAVROS ROS 2 mimarisinde setpoint_velocity bir eklenti düğümüdür (`/mavros/setpoint_velocity`).
+  - Bu düğümün `mav_frame` parametresi varsayılan olarak **`LOCAL_NED`** (North-East-Down) kullanır ve ROS tarafındaki hızları yerel harita koordinatlarına (ENU) göre yorumlar.
   - Eğer robot 90° dönmüşse (örneğin Doğuya bakıyorsa), gövdeye göre "ileri" ($X_{\text{body}}$) komutu ile haritaya göre "Kuzey" ($X_{\text{local}}$) komutu farklı yönleri ifade eder!
-  - **Doğru Yapılandırma:** Robotun baktığı yönde ilerlemesi için komutların **Gövde Çerçevesinde (BODY_NED / BODY_OFFSET_NED)** gönderilmesi veya MAVROS konfigürasyonunda `mav_frame: BODY_NED` seçilmesi gerekir.
+  - ⚠️ **Kaynak Kod Gerçeği:** Eklentinin callback fonksiyonu mesajdaki `header.frame_id` değerini kullanmaz; hız vektörünün hangi çerçevede dönüştürüleceğini tamamen düğümün **`mav_frame`** parametresi belirler ([`setpoint_velocity.cpp`](https://github.com/mavlink/mavros/blob/ros2/mavros/src/plugins/setpoint_velocity.cpp)).
+  - **Doğru Yapılandırma:** Robotun baktığı yönde ilerlemesi için eklenti düğümünün parametresi dinamik olarak `ros2 param set /mavros/setpoint_velocity mav_frame BODY_NED` komutu ile **`BODY_NED`** yapılmalı veya konfigürasyonda bu değer tanımlanmalıdır.
 
 ---
 
@@ -93,19 +95,22 @@ ros2 service call /mavros/set_mode mavros_msgs/srv/SetMode "{custom_mode: 'GUIDE
 ros2 service call /mavros/cmd/arming mavros_msgs/srv/CommandBool "{value: true}"
 
 # 3. ⚠️ KRİTİK EKSEN AYARI: Hız komutlarını robotun gövde eksenine (BODY_NED) bağlayın
-# (Bu ayar yapılmazsa MAVROS varsayılanı LOCAL_NED kullanır ve robot döndükten sonra ileri komutunda kuzeye kayar)
-ros2 param set /mavros setpoint_velocity.mav_frame BODY_NED
+# MAVROS ROS 2 mimarisinde setpoint_velocity eklentisi '/mavros/setpoint_velocity' düğümü olarak çalışır.
+# Kaynak kodunda (setpoint_velocity.cpp) görüleceği üzere callback header.frame_id'yi dikkate almaz;
+# koordinat dönüşümünü doğrudan düğümün 'mav_frame' parametresi belirler.
+# (Bu ayar yapılmazsa varsayılan LOCAL_NED kullanılır ve robot döndükten sonra ileri komutunda kuzeye kayar)
+ros2 param set /mavros/setpoint_velocity mav_frame BODY_NED
 
 # Ayarın uygulandığını doğrulayın:
-ros2 param get /mavros setpoint_velocity.mav_frame
+ros2 param get /mavros/setpoint_velocity mav_frame
 # Beklenen çıktı: String value is: BODY_NED
 
 # 4. Hız komutunu yayınlayın (10 Hz düzenli akış)
-# Yöntem A: Unstamped Twist (BODY_NED parametresi sayesinde robotun burnunun baktığı yönde sürer):
+# Yöntem A: Unstamped Twist (mav_frame: BODY_NED parametresi sayesinde robotun burnunun baktığı yönde sürer):
 ros2 topic pub /mavros/setpoint_velocity/cmd_vel_unstamped geometry_msgs/msg/Twist "{linear: {x: 1.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" -r 10
 
-# Yöntem B (Alternatif): 'base_link' gövde çerçevesini açıkça belirten TwistStamped yayını:
-# ros2 topic pub /mavros/setpoint_velocity/cmd_vel geometry_msgs/msg/TwistStamped "{header: {frame_id: 'base_link'}, twist: {linear: {x: 1.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}}" -r 10
+# Yöntem B (Alternatif): TwistStamped yayını (Eksen dönüşümü yine header.frame_id'den bağımsız olarak mav_frame parametresine göre belirlenir):
+# ros2 topic pub /mavros/setpoint_velocity/cmd_vel geometry_msgs/msg/TwistStamped "{twist: {linear: {x: 1.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}}" -r 10
 ```
 
 MAVProxy konsolunda ve harita penceresinde aracın konumunun ve yer hızının robotun yöneldiği eksen boyunca değiştiği gözlemlenmelidir.

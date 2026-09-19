@@ -17,7 +17,6 @@ class TagFollower(Node):
         self.declare_parameter('max_transform_age_sec', 0.5)            # TF veri tazelik eşiği (sn)
         self.declare_parameter('max_linear_speed', 0.2)
         self.declare_parameter('max_angular_speed', 0.3)
-        self.declare_parameter('use_sim_time', False)                   # Simülasyon zamanı (/clock) desteği
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)

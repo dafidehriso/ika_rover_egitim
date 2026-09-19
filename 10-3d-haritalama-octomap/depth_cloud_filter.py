@@ -12,7 +12,6 @@ from tf2_ros import Buffer, TransformException, TransformListener
 class DepthCloudFilter(Node):
     def __init__(self):
         super().__init__('depth_cloud_filter')
-        self.declare_parameter('use_sim_time', False)
         self.declare_parameter('min_height', 0.08)
         self.declare_parameter('max_height', 1.65)
         self.declare_parameter('max_range', 8.0)
