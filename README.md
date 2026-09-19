@@ -22,6 +22,11 @@ Her klasör bağımsız bir "ders" — sırayla takip edin, her biri bir önceki
 | [04](./04-opencv-goruntu-isleme) | OpenCV ile Görüntü İşleme | Kamera sensörü, `cv_bridge`, HSV renk uzayı, kontur tespiti |
 | [05](./05-apriltag-ile-konum-tespiti) | AprilTag ile Konum Tespiti | Görsel işaretlerden 3D pose çıkarma, `tf2`, hedefe yönelik otonom hareket |
 | [06](./06-mavros-ardupilot-entegrasyonu) | MAVROS + ArduPilot Entegrasyonu | Pixhawk simülasyonu (SITL), companion computer ↔ flight controller mimarisi |
+| [07](./07-cok-kamera-mimarisi-ve-parkur) | Çoklu Kamera Mimarisi ve Gerçekçi Parkur | 5 kameralı SDF tasarımı, doku/materyal doğrulama, kapalı döngü koridor, WASD kontrolü |
+| [08](./08-stereo-derinlik-point-cloud) | Stereo Derinlik ve Point Cloud | Disparity haritası, camera_info intrinsics, PointCloud2, RViz görselleştirme |
+| [09](./09-2d-slam) | 2D SLAM (slam_toolbox) | TF ağacı kurma, base_frame konfigürasyonu, loop closure, occupancy grid |
+| [10](./10-3d-haritalama-octomap) | 3D Haritalama (OctoMap) | Optik çerçeve kavramı, native depth camera, odom vs map frame, launch dosyası birleştirme |
+| [11](./11-denge-ve-fizik-duzeltmeleri) | Denge ve Fizik Düzeltmeleri | Caster yerleşimi, rampa geometrisi matematiği (kısmen doğrulanmış) |
 
 ## Genel Mimari
 
@@ -32,6 +37,10 @@ Gazebo (fizik + sensör simülasyonu)
    ├── Lidar → engelden kaçma node'u → /cmd_vel
    ├── Kamera → OpenCV renk tespiti
    ├── Kamera → AprilTag tespiti → tf pose → tag_follower node'u → /cmd_vel
+   ├── 5 Kamera (ön stereo çift + sağ/sol/arka mono) → çoklu görüş
+   ├── Ön Stereo Çift → stereo_disparity node → point cloud (tanı amaçlı, korunuyor)
+   ├── Native Depth Camera → depth_cloud_filter node → filtrelenmiş point cloud → OctoMap (odom frame)
+   ├── Lidar → slam_toolbox → 2D occupancy grid harita (map frame, loop closure)
    └── /cmd_vel ──┬──> Gazebo diff_drive (görsel/fiziksel hareket)
                   └──> MAVROS → ArduPilot SITL (Pixhawk simülasyonu, komut akışı kanıtı)
 ```
