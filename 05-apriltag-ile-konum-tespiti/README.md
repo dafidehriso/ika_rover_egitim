@@ -38,19 +38,32 @@ Modeli world dosyanıza ekleyin:
 <include>
   <uri>model://apriltag_0</uri>
   <name>apriltag_0</name>
-  <pose>1.2 0 0 0 0 1.5708</pose>
+  <pose>1.2 0 0.15 0 0 1.5708</pose>
 </include>
 ```
 
-### 🐛 Hata: Tag Kameraya Yandan/Kenardan Görünüyor (İnce Bir Çizgi Gibi)
+### 🐛 Geometri Düzeltmesi: Levha Normali ve Yönlenme
+Modelde levha kutu ölçüsü `<size>0.3 0.01 0.3</size>` olarak tanımlıdır (X=0.3, Y=0.01 kalınlık, Z=0.3).
+- **Yüzey Normali:** İnce kenar Y ekseni boyunca olduğundan, geniş levha yüzeylerinin normal vektörü **±Y yönündedir** (eski notlardaki ±X ifadesi geometriyle çelişiyordu).
+- **Kamera Açısı:** Kamera robotun X ekseni boyunca (ileri) baktığı için, döndürülmemiş (`yaw=0`) bir levhanın sadece 1 cm'lik ince yan kenarını görür!
+- **Çözüm:** Levha dikey eksende (Z) 90° (`1.5708` radyan) döndürülür (`yaw=1.5708`). Böylece geniş yüzey normali robotun kamerasına bakar.
 
-Levhamızı, ince kenarı Y ekseninde, geniş yüzeyleri X ekseninin +/- yönünde olacak şekilde tasarladık. Kamera X ekseni boyunca (ileri) baktığında, döndürülmemiş bir tag'in **kenarını** görür, yüzünü değil.
-
-**Çözüm:** Tag'i, dikey (Z) ekseni etrafında 90° (`1.5708` radyan) döndürün — yukarıdaki `<pose>` satırındaki son değer (`yaw`) bunu yapıyor. Bu değeri world dosyasına baştan koyarsanız, Gazebo'yu her yeniden başlattığınızda elle döndürmeniz gerekmez.
+### ⚠️ Kritik Fiziksel Boyut: `size: 0.24` Gerçeği
+[`apriltag_config.yaml`](./apriltag_config.yaml) dosyasındaki `size` parametresi:
+- AprilTag kütüphanesinde `size`, dış levhanın veya beyaz kenar boşluğunun (quiet zone) genişliği **değildir**; algılanan siyah kare sınırının (dış köşelerin) fiziksel ölçüsüdür.
+- 10x10 piksel tag36h11 dokusunda 1 piksellik beyaz kenar payı düşüldüğünde 8x8'lik siyah kare kalır:
+  $$\text{Etkin Boyut} = \frac{8}{10} \times 0.30\text{ m} = 0.24\text{ m}$$
+- Eğer YAML'da `size: 0.3` yazılırsa, hesaplanan 3D pose mesafesi yaklaşık %25 daha büyük (hatalı) çıkar! Doğru yapılandırma `size: 0.24` olmalıdır.
 
 ## Adım 4: AprilTag Node'unu Çalıştırın
 
-[`apriltag_config.yaml`](./apriltag_config.yaml) dosyasını `~/apriltag_config.yaml` olarak kopyalayın.
+[`apriltag_config.yaml`](./apriltag_config.yaml) dosyasını `~/apriltag_config.yaml` olarak kopyalayın:
+
+```bash
+printf 'apriltag:\n  ros__parameters:\n    image_transport: raw\n    family: 36h11\n    size: 0.24\n' > ~/apriltag_config.yaml
+```
+
+Node'u başlatın:
 
 ```bash
 ros2 run apriltag_ros apriltag_node --ros-args \
@@ -59,74 +72,54 @@ ros2 run apriltag_ros apriltag_node --ros-args \
   --params-file ~/apriltag_config.yaml
 ```
 
-### 🐛 Hata: YAML Girinti (Indentation) Bozuluyor
-
-Terminale çok satırlı YAML içeriği yapıştırırken satırlar birleşip düz bir metin haline gelebiliyor, bu da YAML'ın gerektirdiği hiyerarşiyi bozuyor ve `Cannot have a value before ros__parameters` gibi bir hatayla sonuçlanıyor.
-
-**Çözüm:** `printf` ile satır satır, kaçış karakterleriyle (`\n`) oluşturun:
-
-```bash
-printf 'apriltag:\n  ros__parameters:\n    image_transport: raw\n    family: 36h11\n    size: 0.3\n' > ~/apriltag_config.yaml
-```
-
 ## Adım 5: Tespiti Doğrulayın
 
 ```bash
 ros2 topic echo /detections
 ```
 
-Başarılı bir tespit şöyle görünür:
+Başarılı bir tespit:
+- **`hamming: 0`** — sıfır bit hatası.
+- **`decision_margin`** — yüksek güven skoru.
 
-```yaml
-detections:
-- family: tag36h11
-  id: 0
-  hamming: 0
-  decision_margin: 95.32
-  corners: [...]
-```
+## Adım 6: TF Çerçeve Sözleşmesi (Optik vs Gövde Frame)
 
-- **`hamming: 0`** — sıfır hata, mükemmel okuma.
-- **`decision_margin`** — güven skoru, yüksek olması iyi.
-
-## Adım 6: Gerçek Mesafe/Açıyı Sorgulayın
-
-`apriltag_ros`, otomatik olarak `/tf` üzerinden tag'in tam pozunu yayınlıyor (bunun için `size` parametresi doğru ayarlanmış olmalı):
+`apriltag_ros`, tag pozunu kamera optik çerçevesine göre yayınlar:
 
 ```bash
-ros2 run tf2_ros tf2_echo camera_link tag36h11:0
+ros2 run tf2_ros tf2_echo camera_optical_frame tag36h11:0
 ```
 
-Çıktı:
+- **`camera_optical_frame` sorgusunda (Pinhole Kamera Kuralı):**
+  - **Z = İleri mesafe (derinlik)**
+  - **X = Sağ / Sol ofset** (pozitif = sağ, negatif = sol)
+  - **Y = Dikey ofset** (pozitif = aşağı)
+- **`base_link` sorgusunda (Robot Gövde Kuralı REP-103):**
+  - **X = İleri mesafe**
+  - **Y = Sol / Sağ ofset** (pozitif = sol, negatif = sağ)
+  - **Z = Yükseklik**
 
-```
-- Translation: [-0.003, -0.126, 1.107]
-```
+*Ders:* TF sorgusunda hangi referans çerçevesini kullanıyorsanız, hız komutunu o çerçevenin eksen kuralına göre türetmelisiniz (Modül 10'daki optik çerçeve rotasyonuyla uyumluluk).
 
-Kamera optik çerçevesinde: **z = ileri mesafe**, **x = sağ/sol ofset**, **y = dikey ofset**. Yani bu örnekte tag, kameradan **1.107 metre** uzakta ve neredeyse tam ortada.
+## Adım 7: Otonom Takip Davranışı ([`tag_follower.py`](./tag_follower.py))
 
-## Adım 7: "Tag'e Git ve 1 Metre Önünde Dur" Davranışı
+[`tag_follower.py`](./tag_follower.py), `/tf` üzerinden tag pozunu okuyarak robotu hedefin 1.0 m önünde duracak şekilde sürer:
 
-[`tag_follower.py`](./tag_follower.py) dosyası, `/tf`'ten okuduğu mesafe/ofset bilgisini kullanarak basit bir **oransal (proportional) kontrol** ile robotu tag'e yönlendiriyor:
+### ⚠️ Önemli Güvenlik ve Tazelik Düzeltmeleri:
+1. **Zaman Aşımı (Freshness Watchdog):** `lookup_transform(..., Time())` buffer'daki son kaydı döndürür. Tag kameranın görüşünden çıksa bile son kayıt orada kalır! `tag_follower.py`, TF zaman damgasını (`transform.header.stamp`) denetler; veri 0.5 saniyeden eskiyse tag kayboldu kabul edilip robot durdurulur (`stop_robot()`).
+2. **Kamera Montaj Ofseti:** Kamera `base_link` merkezinden 0.3 m önde (x=0.3) ve 0.2 m yukarıdadır. `target_frame: camera_optical_frame` seçildiğinde hedef mesafe kameraya göre; `target_frame: base_link` seçildiğinde robotun gövde merkezine göre hesaplanır.
+3. **Güvenli Kapanış:** Node kapatılırken robotun son hızda asılı kalmaması için `stop_robot()` çağrılır.
+4. **Tek Kontrolcü Kuralı:** `tag_follower` çalışırken teleop veya avoider node'ları kapatılmalıdır.
 
 ```bash
 cd ~/ika_ws/src
 ros2 pkg create --build-type ament_python tag_follower --dependencies rclpy geometry_msgs tf2_ros
-# tag_follower.py dosyasını kopyalayın, setup.py'a ekleyin:
-# 'tag_follower = tag_follower.tag_follower:main',
+# tag_follower.py dosyasını tag_follower/tag_follower/ içine kopyalayın
 cd ~/ika_ws && colcon build --packages-select tag_follower
 source install/setup.bash
 ros2 run tag_follower tag_follower
 ```
 
-**Kodun mantığı:** `distance_error` pozitifse (tag hedeften uzaksa) ileri gidiyor, negatifse geri gidiyor. `lateral_offset` robotu tag'i ortalayacak şekilde döndürüyor — hatanın büyüklüğüyle orantılı bir düzeltme (klasik P-controller).
-
-## Bu Modülün Gösterdiği Gerçek Dünya Uygulamaları
-
-- GPS'in çalışmadığı kapalı alanlarda konumlandırma
-- Şarj istasyonuna / yükleme noktasına hassas yanaşma
-- Hedefe yönelik, hesaplanmış otonom hareket (sadece "engelden kaç" gibi tepkisel değil)
-
 ## Sırada
 
-[Modül 6: MAVROS + ArduPilot Entegrasyonu](../06-mavros-ardupilot-entegrasyonu) — bu robotun kararlarını gerçek bir Pixhawk mikrokontrolcü simülasyonuna nasıl ilettiğimizi göreceğiz.
+[Modül 6: MAVROS + ArduPilot Entegrasyonu](../06-mavros-ardupilot-entegrasyonu) — bu robotun kararlarını Pixhawk simülasyonuna nasıl ilettiğimizi göreceğiz.

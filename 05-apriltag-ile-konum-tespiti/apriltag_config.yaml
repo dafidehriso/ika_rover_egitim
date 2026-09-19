@@ -2,4 +2,10 @@ apriltag:
   ros__parameters:
     image_transport: raw
     family: 36h11
-    size: 0.3
+    # ⚠️ ÖNEMLİ BOYUT NOTU:
+    # 'size', dış levha veya beyaz kenar boşluğu (quiet zone) dahil toplam boyut DEĞİL,
+    # algılanan siyah kare sınırının (dış köşelerin) fiziksel ölçüsüdür.
+    # 10x10 piksel tag36h11 dokusunda 8x8 siyah alan bulunur:
+    # 0.30 m levha genişliğinde etkin siyah kare boyutu: (8/10) * 0.30m = 0.24m.
+    # size=0.30 yazılırsa 3D pose derinliği ~%25 daha büyük (hatalı) hesaplanır.
+    size: 0.24
