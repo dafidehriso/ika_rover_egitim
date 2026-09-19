@@ -1,0 +1,148 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="default">
+    <include><uri>model://sun</uri></include>
+
+    <!-- ÇİM ZEMİN (Gazebo/Grass dokusu - organik/düzensiz doku) -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Grass</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- RENKLİ REFERANS KUTULARI (Modül 4'ten) -->
+    <model name="red_box">
+      <static>true</static>
+      <pose>1 1 0.15 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>0.3 0.3 0.3</size></box></geometry>
+          <material><ambient>1 0 0 1</ambient><diffuse>1 0 0 1</diffuse></material>
+        </visual>
+        <collision name="collision"><geometry><box><size>0.3 0.3 0.3</size></box></geometry></collision>
+      </link>
+    </model>
+
+    <model name="green_box">
+      <static>true</static>
+      <pose>1 -1 0.15 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>0.3 0.3 0.3</size></box></geometry>
+          <material><ambient>0 1 0 1</ambient><diffuse>0 1 0 1</diffuse></material>
+        </visual>
+        <collision name="collision"><geometry><box><size>0.3 0.3 0.3</size></box></geometry></collision>
+      </link>
+    </model>
+
+    <!-- KAPALI DÖNGÜ KORİDOR PARKURU (SLAM Loop Closure Testi İçin) -->
+    <!-- KOL 1 (Doğu Yönü: leg1) -->
+    <model name="wall_leg1_south">
+      <static>true</static>
+      <pose>6.5 -1 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>5 0.1 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>5 0.1 1</size></box></geometry>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Bricks</name></script></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_leg1_north">
+      <static>true</static>
+      <pose>6.5 1 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>5 0.1 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>5 0.1 1</size></box></geometry>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Bricks</name></script></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- KOL 2 (Kuzey Yönü: leg2) -->
+    <model name="wall_leg2_west">
+      <static>true</static>
+      <pose>8 3.5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.1 5 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.1 5 1</size></box></geometry>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/PaintedWall</name></script></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_leg2_east">
+      <static>true</static>
+      <pose>10 3.5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.1 5 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.1 5 1</size></box></geometry>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/PaintedWall</name></script></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- KOL 3 (Batı Yönü: leg3) -->
+    <model name="wall_leg3_south">
+      <static>true</static>
+      <pose>6.5 5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>5 0.1 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>5 0.1 1</size></box></geometry>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Wood</name></script></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_leg3_north">
+      <static>true</static>
+      <pose>6.5 7 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>5 0.1 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>5 0.1 1</size></box></geometry>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Wood</name></script></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- KOL 4 (Güney Yönü: leg4 - Döngü Birleşimi) -->
+    <model name="wall_leg4_west">
+      <static>true</static>
+      <pose>3 3.5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.1 5 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.1 5 1</size></box></geometry>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Bricks</name></script></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_leg4_east">
+      <static>true</static>
+      <pose>5 3.5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.1 5 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.1 5 1</size></box></geometry>
+          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Bricks</name></script></material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>
