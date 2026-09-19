@@ -1,75 +1,94 @@
 # Modül 10: 3D Haritalama (OctoMap)
 
-## Durum: TAMAMLANDI (kalite ince ayarı ileride sürebilir)
+## Durum: TAMAMLANDI (kalite ve doğrulama ince ayarı ileride sürebilir)
 
-## Konsept: OctoMap Nedir?
-2D SLAM haritası sadece "burada duvar var mı" (x,y) bilir, yükseklik yok.
-OctoMap, uzayı küçük küplere (voxel) bölüp her birini "dolu/boş/bilinmiyor"
-olarak işaretleyerek GERÇEK 3D hacimsel harita çıkarır. Kendi konum kestirmez —
-SLAM'dan (Modül 9) gelen konumu kullanıp sadece hacmi doldurur.
+## Önkoşullar ve Paket Kurulumu
+```bash
+sudo apt install ros-humble-octomap-server ros-humble-octomap-rviz-plugins ros-humble-slam-toolbox -y
+```
+
+## Modül Dosyaları
+- [`depth_cloud_filter.py`](./depth_cloud_filter.py): Native derinlik kamerasından gelen bulutu zemin/tavan/mesafe filtrelerinden geçirip alt örnekleyen node.
+- [`sensor_tf.launch.py`](./sensor_tf.launch.py): Gövde ve optik çerçeve TF yayınlarını başlatan launch dosyası.
+- [`ika_mapping.launch.py`](./ika_mapping.launch.py): Gazebo, SLAM, filtre, OctoMap ve RViz'i tek komutla başlatan birleşik pipeline.
+- [`ika_mapping.rviz`](./ika_mapping.rviz): 2B harita, 3B OctoMap ve sensörleri hazır getiren RViz görselleştirme konfigürasyonu.
+
+## Konsept: OctoMap Nedir? (3B Haritalama vs 3B SLAM)
+- **2D SLAM (slam_toolbox):** Lidar verisiyle zemine paralel düzlemde bir occupancy grid (doluluk ızgarası) haritası çıkarır. Sadece (X, Y) koordinatlarında duvar/engel olup olmadığını bilir; tavan, rampa, masa üstü gibi yükseklik boyutunu (Z) bilmez.
+- **OctoMap (Hacimsel 3B Harita):** Uzayı sekizli ağaç (octree) yapısıyla küçük küplere (voxel - varsayılan 0.10 m) böler. Her küpü "dolu", "boş" veya "bilinmeyen" olarak olasılıksal günceller.
+- **⚠️ Önemli Ayrım:** OctoMap tek başına bir **SLAM algoritması DEĞİLDİR**. Kendi robot konumunu kestirmez; robotun o an nerede olduğunu harici bir kaynaktan (odometri veya 2D SLAM) alıp gelen nokta bulutundaki pikselleri 3B uzaya yerleştirir (ray casting).
 
 ## EN ÖNEMLİ KAVRAMSAL HATA: "Optik Çerçeve" Sorunu
-OctoMap'e ilk bağlandığında, 3D nokta bulutu robotun ÖNÜNDE değil, TAMAMEN
-HAVADA/ÜSTÜNDE saçılmış görünüyordu.
+OctoMap'e ilk bağlandığında, 3D nokta bulutu robotun ÖNÜNDE değil, TAMAMEN HAVADA/ÜSTÜNDE saçılmış görünüyordu.
 
-Kök neden: İKİ farklı, çakışan yön kuralı var:
-- ROS'un gövde kuralı (REP-103): X=ileri, Y=sol, Z=yukarı
-- Kamera matematiğinin (pinhole) kuralı: Z=derinlik(ileri), X=sağ, Y=aşağı
+### Kök Neden: İKİ Farklı, Çakışan Yön Kuralı (REP-103 vs Pinhole)
+1. **ROS Gövde Kuralı (REP-103):** X = İleri, Y = Sol, Z = Yukarı.
+2. **Kamera Pinhole Matematiği Kuralı:** Z = Derinlik (İleri), X = Sağ, Y = Aşağı.
 
-stereo_disparity.py, noktaları KAMERA kuralına göre hesaplıyordu (Z=derinlik)
-ama bu noktalar camera_link frame'ine etiketleniyordu — ve camera_link, TF'e
-GÖVDE kuralına göre (X=ileri) tanıtılmıştı. Sonuç: "derinlik" (ileri mesafe),
-yanlışlıkla "yukarı" (Z, gövde kuralında) olarak yorumlanıyordu.
+`stereo_disparity.py` veya derinlik kamerası, noktaları KAMERA matematiğine göre hesaplıyordu (Z ekseni ileri mesafe). Ancak bu noktalar `camera_link` frame'ine etiketleniyordu — ve `camera_link`, TF ağacında gövde kuralına göre (X=ileri) bağlanmıştı!
+Sonuç: İleri yöndeki derinlik (Z), TF tarafından "robotun yukarısı" olarak algılandı ve tüm duvarlar gökyüzüne dikildi.
 
-Çözüm: Gerçek kamera sürücülerinin (RealSense, vb.) yaptığı gibi, camera_link'e
-EK olarak, SADECE ROTASYON farkı olan ikinci bir frame tanımlandı:
+### Çözüm: `camera_optical_frame` Rotasyon Frame'i
+Gerçek endüstriyel kamera sürücülerinin (Intel RealSense, ZED vb.) yaptığı gibi, `camera_link`'e ek olarak, **sadece eksen rotasyonu içeren** ikinci bir frame tanımlandı:
+
 ```bash
 ros2 run tf2_ros static_transform_publisher 0 0 0 -1.5707963267948966 0 -1.5707963267948966 camera_link camera_optical_frame
 ```
-Ve point cloud'un frame_id'si camera_link yerine camera_optical_frame yapıldı.
-Bu, TF zincirini base_link → camera_link (fiziksel konum) → camera_optical_frame
-(sadece rotasyon, kamera matematiğine çevirir) şeklinde ikiye ayırıyor.
 
-DERS: Bir sensörün TF'ini kurarken, "fiziksel montaj konumu" ile "verinin
-matematiksel olarak hangi eksen kuralında üretildiği" İKİ AYRI ŞEYDİR, aynı
-frame'de karıştırılmamalı.
+Ve üretilen tüm point cloud mesajlarının `header.frame_id` değeri `camera_optical_frame` olarak güncellendi.
+- `base_link` → `camera_link` (Fiziksel montaj konumu: 0.3m ileri, 0.2m yukarı)
+- `camera_link` → `camera_optical_frame` (Sadece koordinat ekseni rotasyonu: roll=-90°, yaw=-90°)
 
-## Mimari Değişiklik: Stereo'dan Native Depth Camera'ya Geçiş
-Optik çerçeve düzeltmesinden sonra bile point cloud hâlâ gürültülüydü (çim
-dokusu + StereoSGBM sınırlamaları + robot dönerken biriken hatalı noktalar).
-Karar: OctoMap'i beslemek için artık stereo_disparity.py DEĞİL, Gazebo'nun
-native `depth_camera` sensöründen türetilen, zemin/yükseklik filtreli
-`/ika_rover/depth/obstacles` point cloud'u (yeni bir node: depth_cloud_filter.py)
-kullanılıyor. Stereo node'u SİLİNMEDİ — tanı/gözlem ve "iki yöntemi karşılaştırma"
-amaçlı, kurs için bilinçli olarak korundu (bkz Modül 8).
+> **DERS:** Bir sensörün TF'ini kurarken, **fiziksel montaj konumu** ile **üretilen verinin matematiksel eksen sözleşmesi** İKİ AYRI ŞEYDİR; aynı frame etiketinde karıştırılmamalıdır.
 
-## Kritik TF/Drift Kararı: OctoMap'i 'map' Değil 'odom' Frame'ine Bağlama
-İlk denemede OctoMap 'map' frame'ine bağlıydı. Sorun: slam_toolbox loop-closure
-sırasında map→odom dönüşümünde ani "sıçramalar" yapabilir (harita optimize
-olurken robotun tahmini konumu küçük düzeltmeler alır). OctoMap 'map' frame'inde
-olduğunda, bu sıçramalar eski (zaten yerleştirilmiş) 3D voxel'lerin haritada
-KAYIP, "hayalet duvarlar" şeklinde kalmasına yol açıyordu. Çözüm: OctoMap
-'odom' frame'ine bağlandı — bu frame sürekli/kaymasız (drift daha yavaş ve
-sürekli, ani sıçrama yok), voxel tutarlılığı korunuyor.
+---
 
-## Sistem Kararlılığı İyileştirmeleri
-- WSL2/Ubuntu 22.04'te yaşanan DDS (ROS 2'nin alt seviye mesajlaşma protokolü)
-  kilitlenmeleri, her terminalde `export FASTDDS_BUILTIN_TRANSPORTS=UDPv4`
-  ortam değişkeniyle çözüldü.
-- Tüm elle açılan static_transform_publisher komutları, kalıcı bir launch
-  dosyasına (sensor_tf.launch.py) taşındı — artık her oturumda elle
-  yazılmıyor.
-- Tek bir launch dosyası (ika_mapping.launch.py), tüm ekosistemi (Gazebo,
-  slam_toolbox, TF'ler, depth filtreleme, OctoMap, RViz2) tek komutla
-  başlatıyor:
-```bash
-  ros2 launch camera_vision ika_mapping.launch.py
+## Mimari Değişiklik: Stereo Disparity'den Native Depth Camera'ya Geçiş
+Optik çerçeve düzeltmesinden sonra bile stereo nokta bulutu dokusuz yüzeylerde (düz duvar, çim) gürültü içeriyordu (StereoSGBM doku arar).
+- **Yeni Node:** `depth_cloud_filter.py`, Gazebo'nun native derinlik sensöründen (`/ika_rover/depth_camera/points`) beslenir.
+- **Filtreler:** Zemin seviyesi (min 0.08 m altı filtrelenir), tavan/yükseklik limiti (max 1.65 m), maksimum menzil (8.0 m) ve 0.10 m voxel grid alt örnekleme uygulanarak OctoMap için temiz bir engel bulutu (`/ika_rover/depth/obstacles`) üretilir.
+- *Not:* Modül 8'deki `stereo_disparity.py` silinmedi; iki yöntemi karşılaştırmak amacıyla teşhis/öğretici olarak tutulmaktadır.
+
+---
+
+## Kritik TF Kapsamı: OctoMap'i 'odom' Frame'ine Bağlama
+İlk denemede OctoMap `map` frame'ine bağlanmıştı.
+- **Sorun:** `slam_toolbox`, kapalı döngüde (loop-closure) haritayı optimize ederken `map -> odom` dönüşümünde ani düzeltme sıçramaları yapabilir. OctoMap `map` frame'indeyken bu ani sıçrama anında eklenen voxel'ler eski voxel'lerle üst üste binip haritada "hayalet duvarlar" oluşturdu.
+- **Çözüm ve Sınırları:** OctoMap `frame_id: odom` olarak ayarlandı.
+  - **Doğru Kapsam:** `odom` frame'i süreklidir (ani sıçrama yapmaz, teğetsel akar), bu nedenle yeni gelen ölçümler o anki gövdeye göre tutarlı birikir.
+  - **⚠️ Önemli Teknik Uyarı:** Odom'a bağlamak **global bir loop-closure düzeltmesi DEĞİLDİR**. Tekerlek odometrisi zamanla kayarsa (drift), odom frame'indeki harita da hafifçe deforme olabilir ve geçmişte eklenmiş voxel'ler geriye dönük düzeltilmez. RViz'de Fixed Frame olarak `map` seçildiğinde ise odom haritası bir bütün olarak dönüştürülerek gösterilir.
+
+---
+
+## Odometri Kaynağı: Simülasyon Ground-Truth vs Tekerlek Enkoderi
+`model.sdf` içindeki `diff_drive` eklentisinde:
+```xml
+<odometry_source>1</odometry_source>
 ```
+- **`1` (WORLD - Varsayılan):** Gazebo'nun simülasyon fizik motorundaki kusursuz yer gerçeği pozunu (ground truth) yayınlar. Tekerlek kayması ve patinaj odometriyi bozmaz. Başlangıç SLAM ve haritalama dersleri için idealdir.
+- **`0` (ENCODER):** Gerçek hayattaki gibi tekerleklerin dönüş eklemlerinden entegre edilir; sürtünme ve kaymalar drift yaratır.
 
-## Doğrulama Sonucu
-SDF'teki referans geometriyle karşılaştırıldığında: %99.5 (3D) ve %100 (2D)
-geometrik örtüşme ölçüldü — Modül 9 ve 10'un teknik olarak başarıyla
-tamamlandığının kanıtı.
+---
+
+## Sistem Kararlılığı ve Birleşik Launch
+
+1. **DDS Kilitlenmeleri (WSL2):** Ubuntu 22.04'te FastDDS çoklu yayın paketlerinin kilitlenmesini önlemek için:
+   ```bash
+   export FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+   ```
+2. **Kalıcı TF Launch'ı:** Tüm statik dönüşümler `sensor_tf.launch.py` içine taşındı.
+3. **Tek Komutla Haritalama:**
+   ```bash
+   ros2 launch camera_vision ika_mapping.launch.py
+   ```
+   Bu launch dosyası Gazebo'yu, sensör TF'lerini, `slam_toolbox`'ı, derinlik filtresini, `octomap_server`'ı ve RViz2'yi tek hamlede ayağa kaldırır.
+
+---
+
+## Ölçüm ve Doğrulama Durumu
+Önceki geliştirme oturumunda SDF referans duvarlarıyla yapılan geometrik karşılaştırmada %99.5 (3D) ve %100 (2D) örtüşme elde edildiği raporlanmıştır.
+- **Önemli Şeffaflık Notu:** Bu oranlar geçmiş oturumdaki bir test turundan bildirilmiş olup, bu depoda henüz tekrar çalıştırılabilir otomatik bir kıyaslama script'i ile sunulmamaktadır.
+- Hedeflenen Değerlendirme Standardı: Koridor parkurunda 0.10 m voxel çözünürlüğünde, bilinen referans duvar geometrisi ile ölçülen dolu hücreler arasındaki IoU (Intersection over Union) ve hassasiyet/duyarlılık (precision/recall) metrikleri şeklinde belgelenmelidir.
 
 ## Sırada
-Modül 11: Denge ve Fizik Düzeltmeleri, sonra Modül 12: Otonom Keşif (Nav2)
+[Modül 11: Denge ve Fizik Düzeltmeleri](../11-denge-ve-fizik-duzeltmeleri)

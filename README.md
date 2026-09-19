@@ -22,11 +22,20 @@ Her klasör bağımsız bir "ders" — sırayla takip edin, her biri bir önceki
 | [04](./04-opencv-goruntu-isleme) | OpenCV ile Görüntü İşleme | Kamera sensörü, `cv_bridge`, HSV renk uzayı, kontur tespiti |
 | [05](./05-apriltag-ile-konum-tespiti) | AprilTag ile Konum Tespiti | Görsel işaretlerden 3D pose çıkarma, `tf2`, hedefe yönelik otonom hareket |
 | [06](./06-mavros-ardupilot-entegrasyonu) | MAVROS + ArduPilot Entegrasyonu | Pixhawk simülasyonu (SITL), companion computer ↔ flight controller mimarisi |
-| [07](./07-cok-kamera-mimarisi-ve-parkur) | Çoklu Kamera Mimarisi ve Gerçekçi Parkur | 5 kameralı SDF tasarımı, doku/materyal doğrulama, kapalı döngü koridor, WASD kontrolü |
+| [07](./07-cok-kamera-mimarisi-ve-parkur) | Çoklu Kamera Mimarisi ve Gerçekçi Parkur | 5 kameralı SDF tasarımı, doku/materyal doğrulama, kapalı döngü koridor, klavye teleop |
 | [08](./08-stereo-derinlik-point-cloud) | Stereo Derinlik ve Point Cloud | Disparity haritası, camera_info intrinsics, PointCloud2, RViz görselleştirme |
 | [09](./09-2d-slam) | 2D SLAM (slam_toolbox) | TF ağacı kurma, base_frame konfigürasyonu, loop closure, occupancy grid |
 | [10](./10-3d-haritalama-octomap) | 3D Haritalama (OctoMap) | Optik çerçeve kavramı, native depth camera, odom vs map frame, launch dosyası birleştirme |
 | [11](./11-denge-ve-fizik-duzeltmeleri) | Denge ve Fizik Düzeltmeleri | Caster yerleşimi, rampa geometrisi matematiği (kısmen doğrulanmış) |
+
+## Test Edilen Sistem Ortamı
+
+Bu eğitim serisindeki kodlar, launch dosyaları ve simülasyon dünyaları aşağıdaki ortamda test edilmiş ve doğrulanmıştır:
+
+- **İşletim Sistemi:** Windows 11 Pro + WSL2 (Ubuntu 22.04 LTS)
+- **ROS Sürümü:** ROS 2 Humble Hawksbill (`ros-humble-desktop`)
+- **Simülatör:** Gazebo Classic 11.10.2 (`gazebo11`)
+- **Önemli Not (Gazebo Classic EOL):** Gazebo Classic (Gazebo 11), Ocak 2025 itibarıyla Resmi Destek Sonu (End-of-Life / EOL) evresine girmiştir. ROS 2 Humble ile hala yaygın ve kararlı şekilde kullanılmakla birlikte, yeni projelerde ve ROS 2 Jazzy / Rolling sürümlerinde Modern Gazebo'ya (Gazebo Sim / Harmonic) geçiş önerilir. Bu repo Gazebo Classic 11 temelinde hazırlanmıştır; modern Gazebo Sim taşınması gelecek güncellemeler kapsamındadır.
 
 ## Genel Mimari
 

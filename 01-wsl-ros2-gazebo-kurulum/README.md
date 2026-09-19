@@ -106,9 +106,15 @@ Kod paketlerini derlemek için kullanılan `colcon` aracı desktop kurulumuyla o
 sudo apt install python3-colcon-common-extensions -y
 ```
 
+### ⚠️ Simülatör Sürümü ve Gazebo Classic EOL Bilgisi
+Bu eğitim serisinde **Gazebo Classic 11.10.2** (`gazebo_ros_pkgs`) kullanılmaktadır.
+- Gazebo Classic, resmi olarak Ocak 2025'te kullanım ömrünün sonuna (End-of-Life / EOL) ulaşmıştır.
+- Mevcut robotik ekosisteminde (özellikle üniversite ve yarışma projelerinde) Gazebo Classic SDF modelleri yaygın olarak kullanılmaya devam etmektedir. Bu kurs, denenmiş ve çalışan Gazebo Classic 11 mimarisini temel alır.
+- Yeni projelere başlarken modern Gazebo'ya (eski adıyla Ignition / Gz Sim) geçiş önerilir; bu geçiş kursun ayrı bir yol haritası olarak değerlendirilebilir.
+
 ## Genel Dersler (Bu Modülden)
 
-- **`.bashrc` değişiklikleri anlıktır** — her değişiklikten sonra `source ~/.bashrc` çalıştırın ya da yeni terminal açın.
+- **`.bashrc` değişiklikleri otomatik olarak mevcut shell'e uygulanmaz** — dosyadaki değişikliklerin geçerli olması için her seferinde `source ~/.bashrc` çalıştırmanız ya da yeni bir terminal açmanız gerekir.
 - Klavye girdisi her zaman **odaktaki pencereye** gider — hangi terminalin komutu aldığını takip edin.
 - WSL2'de ilk açılışlar (özellikle Gazebo) beklenenden yavaş olabilir.
 

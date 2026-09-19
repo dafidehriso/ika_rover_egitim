@@ -1,46 +1,81 @@
 # Modül 8: Stereo Derinlik ve Point Cloud
 
-## Durum: TAMAMLANDI (parametre ince ayarı ileride sürebilir)
+## Öğrenme Hedefleri
+1. İki monoküler kameradan (stereo çift) derinlik ve disparity (ayrıklık) kavramını anlamak.
+2. `camera_info` topic'inden intrinsics ($K$ matrisi) okumak.
+3. OpenCV StereoSGBM algoritması ile disparity hesaplayıp `PointCloud2` nokta bulutu üretmek.
+4. Dokusuz yüzey problemlerini ve parametre ince ayarlarını uygulamak.
+
+## Modül Dosyaları
+- [`stereo_disparity.py`](./stereo_disparity.py): Sol ve sağ kamerayı senkronize alıp PointCloud2 yayınlayan ROS 2 node'u.
+
+---
 
 ## Konsept: İki Göz, Bir Derinlik
-İnsan gözü gibi: aynı nesnenin iki kameradaki piksel konumu farkı (disparity),
-bilinen kamera-arası mesafeyle (baseline) birleşince gerçek mesafeye (derinlik)
-çevrilebilir:
+İnsan gözünün derinlik algısı gibi: aynı nesnenin sol ve sağ kameradaki piksel konumu farkına **disparity ($d$)** denir. Kameralar arası mesafe (**baseline $B$**, bu modelde $0.12\text{ m}$) bilindiğinde derinlik ($Z$) doğrudan hesaplanır:
 
-Derinlik(Z) = (Baseline × Odak_Uzaklığı) / Disparity
+$$Z = \frac{B \cdot f_x}{d}$$
 
-`camera_info` topic'i, K matrisini (fx, fy, cx, cy) taşır — bunlar koddan
-OKUNUR, elle sabit kodlanmaz. Gerçek doğrulanmış değerler: fx=fy=381.46,
-cx=320.5, cy=240.5 (640x480 çözünürlükte).
+Noktaların 3B uzay koordinatları ($X, Y, Z$):
+$$X = \frac{(u - c_x) \cdot Z}{f_x}, \quad Y = \frac{(v - c_y) \cdot Z}{f_y}$$
 
-Her piksel, disparity'den 3D noktaya çevrilir:
-Z = baseline*fx/disparity
-X = (u-cx)*Z/fx
-Y = (v-cy)*Z/fy
+### `camera_info` Topic'i ve K Matrisi
+Bu değerler elle sabit kodlanmaz; kamera sürücüsünün yayınladığı `camera_info` topic'inden otomatik okunur:
+- $f_x, f_y$: Odak uzaklığı ($381.46\text{ px}$)
+- $c_x, c_y$: Optik merkez ($320.5, 240.5\text{ px}$)
+- Çözünürlük: $640 \times 480$
 
-## StereoSGBM ile Disparity Hesabı
-OpenCV'nin StereoSGBM algoritması kullanıldı. `camera_vision` paketine
-`stereo_disparity.py` node'u eklendi: sol+sağ görüntüyü `message_filters.
-ApproximateTimeSynchronizer` ile senkronize alıp, disparity hesaplayıp,
-sensor_msgs_py.point_cloud2 ile PointCloud2 yayınlıyor (/ika_rover/stereo/points).
+---
 
-## HATA: İlk disparity haritası tamamen gürültülüydü
-Sebep: Sahne (kutular, zemin) çoğunlukla DÜZ/TEK RENKLİ yüzeylerden oluşuyordu.
-StereoSGBM eşleşme kurmak için doku/kenar arar, düz yüzeyde hiç "iz" yoktur.
-Çözüm (kısmi): Zemine Gazebo/Grass dokusu verilince (Modül 7) durum iyileşti.
-Ayrıca parametre ince ayarı yapıldı: blockSize 7→11, uniquenessRatio 10→15,
-speckleWindowSize 100→150 (gürültüyü azaltmak için).
+## StereoSGBM ile Disparity ve Nokta Bulutu ([`stereo_disparity.py`](./stereo_disparity.py))
 
-## RViz'de Görselleştirme
-Fixed Frame=camera_link (sonra camera_optical_frame, bkz Modül 10), Color
-Transform=RGB8, Style=Flat Squares. Sonuç: gerçek renklerde (yeşil zemin,
-turuncu ahşap, beyaz duvar) tanınabilir 3D nokta bulutu.
+`stereo_disparity.py` node'u:
+1. `message_filters.ApproximateTimeSynchronizer` ile sol (`/ika_rover/camera_sensor/image_raw`) ve sağ (`/ika_rover/right_camera_sensor/image_raw`) görüntüleri mikrosaniye hassasiyetinde senkronize eder.
+2. `cv2.StereoSGBM` ile disparity haritası üretir (`/ika_rover/stereo/disparity`).
+3. Her geçerli pikseli $(X, Y, Z, RGB)$ formatında `sensor_msgs/PointCloud2` mesajına dönüştürür (`/ika_rover/stereo/points`).
+4. Noktalar **`camera_optical_frame`** eksenine etiketlenir (bkz. Modül 10 optik eksen kuralı).
 
-## Not: Bu Node Hâlâ Kod Tabanında Duruyor (Tanı Amaçlı)
-İleride (Modül 10) 3D haritalama için Gazebo'nun native derinlik kamerasına
-geçildi çünkü daha temiz/güvenilir veri veriyor. Ama stereo_disparity.py
-SİLİNMEDİ — "iki yöntemi karşılaştırma" için kasıtlı olarak bırakıldı, kurs
-açısından öğretici bir örnek.
+---
+
+## 🐛 HATA: İlk Disparity Haritası Tamamen Gürültülüydü
+- **Sebep:** Gazebo'daki varsayılan nesneler (kutular, zemin) tek renkli/düz yüzeylerdir. StereoSGBM eşleşme kurabilmek için doku ve kenar varyansı arar. Düz yüzeyde kontrast olmadığı için algoritma rastgele piksel eşleşmesi yapar ve devasa bir gürültü oluşur.
+- **Çözüm (Kısmi):**
+  1. Modül 7'de zemine organik `Gazebo/Grass` çim dokusu verildi.
+  2. SGBM parametreleri optimize edildi:
+     - `blockSize`: 7 → 11 (daha geniş pencereli desen karşılaştırma)
+     - `uniquenessRatio`: 10 → 15 (en iyi eşleşmenin ikinciden belirgin derecede üstün olması şartı)
+     - `speckleWindowSize`: 100 → 150 (küçük gürültü adacıklarını temizleme)
+  3. Yerel varyans filtresi (`cv2.boxFilter`) ile kontrastı 8 gri seviyenin altındaki dokusuz bölgeler elendi.
+
+---
+
+## Adım Adım Çalıştırma ve RViz Görselleştirme
+
+1. **Simülasyonu Başlatın:**
+   ```bash
+   gazebo --verbose 07-cok-kamera-mimarisi-ve-parkur/parkur.world
+   ```
+2. **Stereo Disparity Node'unu Çalıştırın:**
+   ```bash
+   python3 08-stereo-derinlik-point-cloud/stereo_disparity.py
+   # Veya paket kuruluysa:
+   # ros2 run camera_vision stereo_disparity
+   ```
+3. **RViz2 ile İnceleyin:**
+   ```bash
+   rviz2
+   ```
+   - **Fixed Frame:** `camera_optical_frame`
+   - **Add -> By topic -> `/ika_rover/stereo/points` (PointCloud2)**
+   - **Color Transformer:** `RGB8`
+   - **Style:** `Flat Squares`, Size: `0.03`
+
+*Sonuç:* Çimlerin yeşili, ahşap rampanın kahverengisi ve tuğlaların kırmızısıyla gerçek renkli 3B nokta bulutu ekranda belirir.
+
+---
+
+## Mimari Not: Bu Node Neden Kod Tabanında Korundu?
+Modül 10'da 3D haritalama için Gazebo'nun native `depth_camera` sensörüne geçilmiştir (simülasyon derinlik kamerası gürültüsüz kesin mesafe verir). Ancak `stereo_disparity.py` silinmemiştir; gerçek dünyada pahalı derinlik sensörleri yerine 2 adet ucuz monoküler kamerayla stereo derinlik üretmenin mantığını ve sınırlarını öğretmek için kasıtlı olarak depoda bırakılmıştır.
 
 ## Sırada
-Modül 9: 2D SLAM (slam_toolbox)
+[Modül 9: 2D SLAM (slam_toolbox)](../09-2d-slam)
