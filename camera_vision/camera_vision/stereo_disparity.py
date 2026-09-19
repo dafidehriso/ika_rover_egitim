@@ -10,6 +10,7 @@ import numpy as np
 class StereoDisparityNode(Node):
     def __init__(self):
         super().__init__('stereo_disparity_node')
+        self.declare_parameter('use_sim_time', False)
         self.bridge = CvBridge()
 
         # Kamera intrinsics - camera_info gelene kadar None, ilk mesajda doldurulacak
@@ -37,6 +38,8 @@ class StereoDisparityNode(Node):
         left_sub = message_filters.Subscriber(self, Image, '/ika_rover/camera_sensor/image_raw')
         right_sub = message_filters.Subscriber(self, Image, '/ika_rover/right_camera_sensor/image_raw')
 
+        # 5 milisaniye (0.005 sn) tolerans: 30 FPS'de (33.3 ms periyot) aynı render anına ait
+        # sol ve sağ kareleri eşleştirir, ardışık karelerin yanlış eşleşmesini engeller.
         ts = message_filters.ApproximateTimeSynchronizer(
             [left_sub, right_sub], queue_size=10, slop=0.005)
         ts.registerCallback(self.callback)

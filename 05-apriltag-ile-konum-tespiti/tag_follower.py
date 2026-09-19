@@ -11,12 +11,13 @@ class TagFollower(Node):
         super().__init__('tag_follower')
 
         # Parametreler
-        self.declare_parameter('target_frame', 'camera_optical_frame')  # 'camera_optical_frame' veya 'base_link'
+        self.declare_parameter('target_frame', 'camera_optical_frame')  # 'camera_optical_frame', 'camera_link' veya 'base_link'
         self.declare_parameter('tag_frame', 'tag36h11:0')
         self.declare_parameter('target_distance', 1.0)                  # İstenen hedef durma mesafesi (m)
         self.declare_parameter('max_transform_age_sec', 0.5)            # TF veri tazelik eşiği (sn)
         self.declare_parameter('max_linear_speed', 0.2)
         self.declare_parameter('max_angular_speed', 0.3)
+        self.declare_parameter('use_sim_time', False)                   # Simülasyon zamanı (/clock) desteği
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -53,6 +54,16 @@ class TagFollower(Node):
         now = self.get_clock().now()
         age = (now - transform_time).nanoseconds * 1e-9
 
+        # Zaman uyumsuzluğu teşhisi (Simülasyon vs Sistem Saati):
+        if abs(age) > 1000.0:
+            self.get_logger().error(
+                f'ZAMAN SENKRONİZASYONU UYUŞMAZLIĞI! Mevcut ROS saati ile TF mesaj damgası arasında devasa fark ({age:.1f} sn) var. '
+                f'Gazebo çalışırken node simülasyon saatini dinlemelidir.\n'
+                f'Lütfen node\'u şu parametreyle çalıştırın: ros2 run tag_follower tag_follower --ros-args -p use_sim_time:=true',
+                throttle_duration_sec=3.0)
+            self.stop_robot()
+            return
+
         if age > max_age:
             self.get_logger().warn(
                 f'Tag verisi eski ({age:.2f} sn > {max_age:.2f} sn)! Tag kayboldu kabul edilip duruluyor.',
@@ -71,8 +82,8 @@ class TagFollower(Node):
             # Tag sağdaysa (lateral > 0), robotu sağa döndürmek gerekir.
             # ROS REP-103'te negatif angular.z = SAĞA dönüş, pozitif = SOLA dönüş.
             angular_error = -lateral_offset
-        elif target_frame == 'base_link':
-            # Robot Gövde Çerçevesi (REP-103 Body):
+        elif target_frame in ('base_link', 'camera_link'):
+            # Robot Gövde / Kamera Montaj Çerçevesi (REP-103 Body):
             # X = İleri (+), Y = Sol (+), Z = Yukarı (+)
             forward_distance = t.x
             lateral_offset = t.y  # Pozitifse tag solda, negatifse sağda

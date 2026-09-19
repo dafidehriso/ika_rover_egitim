@@ -30,7 +30,9 @@ Bu değerler elle sabit kodlanmaz; kamera sürücüsünün yayınladığı `came
 ## StereoSGBM ile Disparity ve Nokta Bulutu ([`stereo_disparity.py`](./stereo_disparity.py))
 
 `stereo_disparity.py` node'u:
-1. `message_filters.ApproximateTimeSynchronizer` ile sol (`/ika_rover/camera_sensor/image_raw`) ve sağ (`/ika_rover/right_camera_sensor/image_raw`) görüntüleri mikrosaniye hassasiyetinde senkronize eder.
+1. `message_filters.ApproximateTimeSynchronizer` ile sol (`/ika_rover/camera_sensor/image_raw`) ve sağ (`/ika_rover/right_camera_sensor/image_raw`) görüntüleri **5 milisaniyelik zaman toleransıyla (`slop=0.005` sn)** senkronize eder.
+   - *Teknik Detay:* 30 FPS kamera akışında iki kare arası süre $\approx 33.3\text{ ms}$'dir. 5 ms'lik (`0.005` sn) tolerans, simülasyon render zamanındaki küçük gecikmeleri tolere ederek aynı ana ait sol-sağ kareleri doğru eşleştirirken, komşu döngülerdeki farklı anların yanlışlıkla eşleştirilmesini önler.
+   - *Donanım vs Simülasyon:* Gerçek stereo kameralarda (ör. ZED veya senkronize global-shutter sensörler) donanımsal tetikleme (hardware genlock) ile mikrosaniye düzeyinde deklanşör senkronizasyonu sağlanırken; ROS yazılım katmanında mesaj başlıklarındaki zaman damgaları üzerinden ApproximateTime filtresiyle bu eşleşme garanti edilir.
 2. `cv2.StereoSGBM` ile disparity haritası üretir (`/ika_rover/stereo/disparity`).
 3. Her geçerli pikseli $(X, Y, Z, RGB)$ formatında `sensor_msgs/PointCloud2` mesajına dönüştürür (`/ika_rover/stereo/points`).
 4. Noktalar **`camera_optical_frame`** eksenine etiketlenir (bkz. Modül 10 optik eksen kuralı).
@@ -49,17 +51,40 @@ Bu değerler elle sabit kodlanmaz; kamera sürücüsünün yayınladığı `came
 
 ---
 
+## Hazır `camera_vision` Paketine Geçiş veya Bağımsız Çalıştırma
+
+Modül 4'te oluşturduğunuz temel `camera_vision` paketi yerine, bu depoda hazır olarak gelen ve stereo disparity, derinlik filtreleme ile tam haritalama launch'ını içeren paketi kullanabilirsiniz:
+
+```bash
+# 1. Depodaki tam paketi ROS 2 çalışma alanınıza bağlayın (veya kopyalayın):
+cd ~/ika_ws/src
+rm -rf camera_vision
+ln -s ~/ika_rover_egitim/camera_vision ~/ika_ws/src/camera_vision
+# (Alternatif kopyalama: cp -r ~/ika_rover_egitim/camera_vision ~/ika_ws/src/)
+
+# 2. Paketi derleyin ve ortamı yükleyin:
+cd ~/ika_ws
+colcon build --symlink-install --packages-select camera_vision
+source install/setup.bash
+```
+
+---
+
 ## Adım Adım Çalıştırma ve RViz Görselleştirme
 
 1. **Simülasyonu Başlatın:**
+   (Modül 7'de güncellenen `parkur.world`, 5 kameralı robotu hazır olarak içerir)
    ```bash
    gazebo --verbose 07-cok-kamera-mimarisi-ve-parkur/parkur.world
    ```
 2. **Stereo Disparity Node'unu Çalıştırın:**
+   *Paket üzerinden çalıştırma (Tavsiye Edilen):*
    ```bash
-   python3 08-stereo-derinlik-point-cloud/stereo_disparity.py
-   # Veya paket kuruluysa:
-   # ros2 run camera_vision stereo_disparity
+   ros2 run camera_vision stereo_disparity --ros-args -p use_sim_time:=true
+   ```
+   *Veya doğrudan Python script'i olarak çalıştırma:*
+   ```bash
+   python3 08-stereo-derinlik-point-cloud/stereo_disparity.py --ros-args -p use_sim_time:=true
    ```
 3. **RViz2 ile İnceleyin:**
    ```bash

@@ -82,7 +82,7 @@ Başarılı bir tespit:
 - **`hamming: 0`** — sıfır bit hatası.
 - **`decision_margin`** — yüksek güven skoru.
 
-## Adım 6: TF Çerçeve Sözleşmesi (Optik vs Gövde Frame)
+## Adım 6: TF Çerçeve Sözleşmesi ve Optik Frame Köprüsü
 
 `apriltag_ros`, tag pozunu kamera optik çerçevesine göre yayınlar:
 
@@ -94,12 +94,26 @@ ros2 run tf2_ros tf2_echo camera_optical_frame tag36h11:0
   - **Z = İleri mesafe (derinlik)**
   - **X = Sağ / Sol ofset** (pozitif = sağ, negatif = sol)
   - **Y = Dikey ofset** (pozitif = aşağı)
-- **`base_link` sorgusunda (Robot Gövde Kuralı REP-103):**
+- **`base_link` veya `camera_link` sorgusunda (Robot Gövde Kuralı REP-103):**
   - **X = İleri mesafe**
   - **Y = Sol / Sağ ofset** (pozitif = sol, negatif = sağ)
   - **Z = Yükseklik**
 
-*Ders:* TF sorgusunda hangi referans çerçevesini kullanıyorsanız, hız komutunu o çerçevenin eksen kuralına göre türetmelisiniz (Modül 10'daki optik çerçeve rotasyonuyla uyumluluk).
+### ⚠️ TF Geçiş Adımı: `camera_link` ile `camera_optical_frame` Köprüsü
+Modül 2'de tanımlanan temel SDF modelinde kameranın frame adı `<frame_name>camera_link</frame_name>` (gövde yönelimli) olarak ayarlanmıştı. Ancak bilgisayarlı görü ve AprilTag algoritmaları, optik eksen standardını (`camera_optical_frame`: Z=ileri) bekler.
+
+TF ağacında kopukluk oluşmaması için ayrı bir terminalde şu statik dönüşümleri yayınlayın:
+
+```bash
+# 1. camera_link -> camera_optical_frame optik rotasyonu (roll=-90°, yaw=-90°):
+ros2 run tf2_ros static_transform_publisher 0 0 0 -1.5708 0 -1.5708 camera_link camera_optical_frame
+
+# 2. base_link -> camera_link fiziksel montaj konumu (0.3 m ileri, 0.2 m yukarı):
+ros2 run tf2_ros static_transform_publisher 0.3 0 0.2 0 0 0 base_link camera_link
+```
+*(Böylece `base_link` -> `camera_link` -> `camera_optical_frame` -> `tag36h11:0` TF zinciri eksiksiz tamamlanır ve robot hem kamera optik koordinatlarına hem de gövde merkezine göre tag mesafesini doğru hesaplayabilir).*
+
+---
 
 ## Adım 7: Otonom Takip Davranışı ([`tag_follower.py`](./tag_follower.py))
 
@@ -107,17 +121,42 @@ ros2 run tf2_ros tf2_echo camera_optical_frame tag36h11:0
 
 ### ⚠️ Önemli Güvenlik ve Tazelik Düzeltmeleri:
 1. **Zaman Aşımı (Freshness Watchdog):** `lookup_transform(..., Time())` buffer'daki son kaydı döndürür. Tag kameranın görüşünden çıksa bile son kayıt orada kalır! `tag_follower.py`, TF zaman damgasını (`transform.header.stamp`) denetler; veri 0.5 saniyeden eskiyse tag kayboldu kabul edilip robot durdurulur (`stop_robot()`).
-2. **Kamera Montaj Ofseti:** Kamera `base_link` merkezinden 0.3 m önde (x=0.3) ve 0.2 m yukarıdadır. `target_frame: camera_optical_frame` seçildiğinde hedef mesafe kameraya göre; `target_frame: base_link` seçildiğinde robotun gövde merkezine göre hesaplanır.
-3. **Güvenli Kapanış:** Node kapatılırken robotun son hızda asılı kalmaması için `stop_robot()` çağrılır.
-4. **Tek Kontrolcü Kuralı:** `tag_follower` çalışırken teleop veya avoider node'ları kapatılmalıdır.
+2. **Simülasyon Zamanı Senkronizasyonu (`use_sim_time`):** Gazebo simülasyonu çalışırken ROS 2 node'unun simülasyon saati (`/clock`) ile çalışması zorunludur. Aksi halde sistem duvar saati (epoch) ile simülasyon zamanı arasındaki fark yüzünden tag her zaman "eski" kabul edilir ve robot kilitlenir.
+3. **Kamera Montaj Ofseti:** Kamera `base_link` merkezinden 0.3 m önde (x=0.3) ve 0.2 m yukarıdadır. `target_frame: camera_optical_frame` veya `camera_link` seçildiğinde hedef mesafe kameraya göre; `target_frame: base_link` seçildiğinde robotun gövde merkezine göre hesaplanır.
+4. **Güvenli Kapanış:** Node kapatılırken robotun son hızda asılı kalmaması için `stop_robot()` çağrılır.
+5. **Tek Kontrolcü Kuralı:** `tag_follower` çalışırken teleop veya avoider node'ları kapatılmalıdır.
+
+### 🛠️ Paket Oluşturma, Kayıt ve Çalıştırma Adımları:
 
 ```bash
+# 1. Paketi oluşturun
 cd ~/ika_ws/src
 ros2 pkg create --build-type ament_python tag_follower --dependencies rclpy geometry_msgs tf2_ros
-# tag_follower.py dosyasını tag_follower/tag_follower/ içine kopyalayın
-cd ~/ika_ws && colcon build --packages-select tag_follower
+
+# 2. tag_follower.py dosyasını paket kaynak dizinine kopyalayın
+cp ~/ika_rover_egitim/05-apriltag-ile-konum-tespiti/tag_follower.py ~/ika_ws/src/tag_follower/tag_follower/
+```
+
+**⚠️ Kritik Adım: `setup.py` Dosyasına Giriş Noktası (Entry Point) Eklenmesi**
+`~/ika_ws/src/tag_follower/setup.py` dosyasını bir editörle açın ve `entry_points` sözlüğüne `tag_follower` çalıştırılabilir script kaydını ekleyin:
+
+```python
+    entry_points={
+        'console_scripts': [
+            'tag_follower = tag_follower.tag_follower:main',
+        ],
+    },
+```
+*(Bu kayıt yapılmazsa paket derlense dahi ROS çalıştırılabilir dosyayı bulamaz ve `No executable found` hatası alırsınız).*
+
+```bash
+# 3. Paketi derleyin ve ortamı yükleyin
+cd ~/ika_ws
+colcon build --packages-select tag_follower
 source install/setup.bash
-ros2 run tag_follower tag_follower
+
+# 4. Simülasyon zamanı desteğiyle (use_sim_time:=true) çalıştırın:
+ros2 run tag_follower tag_follower --ros-args -p use_sim_time:=true
 ```
 
 ## Sırada

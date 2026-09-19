@@ -19,12 +19,18 @@ Bu dosya, kurs boyunca karşılaştığımız her hatayı tek bir yerden aranabi
 | Tag kamerada ince bir çizgi gibi görünüyor | Levhanın geniş yüzey normali ±Y'dir; X yönündeki kameraya ince kenar bakar | Tag'i dikey eksende 90° döndürün (`pose`'daki yaw=1.5708) | [05](./05-apriltag-ile-konum-tespiti) |
 | AprilTag 3D mesafe ölçümü %25 hatalı (büyük) çıkıyor | YAML `size`, dış levha değil 8x8 siyah kare boyutu olmalıdır | 0.30 m levha için `size: 0.24` parametresini kullanın | [05](./05-apriltag-ile-konum-tespiti) |
 | Tag görüşten çıktığı halde robot hareket etmeye devam ediyor | `lookup_transform(..., Time())` zaman aşımı kontrolü olmadan son kaydı döner | TF zaman damgası yaşını (`now - stamp > 0.5s`) denetleyip robotu durdurun | [05](./05-apriltag-ile-konum-tespiti) |
+| `tag_follower` çalıştırılırken `No executable found` hatası | `setup.py` dosyasında `entry_points` console_scripts kaydı eksik | `setup.py` dosyasına `'tag_follower = tag_follower.tag_follower:main'` ekleyin | [05](./05-apriltag-ile-konum-tespiti) |
+| `tag_follower` tag'i gördüğü halde robot hiç hareket etmiyor | `use_sim_time:=true` verilmediği için sistem saati ile simülasyon saati uyuşmuyor | `--ros-args -p use_sim_time:=true` parametresiyle çalıştırın | [05](./05-apriltag-ile-konum-tespiti) |
+| TF sorgusunda `camera_optical_frame` bulunamadı hatası | Temel SDF robotunda `camera_link` tanımlı, optik eksen TF'i eksik | `static_transform_publisher 0 0 0 -1.5708 0 -1.5708 camera_link camera_optical_frame` yayınlayın | [05](./05-apriltag-ile-konum-tespiti) |
 | `mavproxy.py: command not found` | `~/.local/bin` PATH'e ekli değil | `export PATH="$PATH:$HOME/.local/bin"` ekleyip `source ~/.bashrc` | [06](./06-mavros-ardupilot-entegrasyonu) |
-| ArduPilot robot döndükten sonra yanlış yöne gidiyor | Gazebo gövde FLU kullanırken MAVROS varsayılanı LOCAL_NED kullanıyor | MAVROS parametrelerinde `BODY_NED` kullanın veya açık frame dönüşümü yapın | [06](./06-mavros-ardupilot-entegrasyonu) |
+| ArduPilot robot döndükten sonra ileri komutunda kuzeye kayıyor | Gazebo gövde FLU kullanırken MAVROS varsayılanı LOCAL_NED kullanıyor | `ros2 param set /mavros setpoint_velocity.mav_frame BODY_NED` ile gövde eksenini ayarlayın | [06](./06-mavros-ardupilot-entegrasyonu) |
+| `parkur.world` başlatıldığında kamera veya lidar topic'leri görünmüyor | Dünya dosyasında robot modeli eksik veya spawn edilmemiş | `parkur.world` içine robot modelini ekleyin veya `spawn_entity.py` ile ekleyin | [07](./07-cok-kamera-mimarisi-ve-parkur) |
 | Gazebo/Rockwall dokusu hiç görünmedi / materyal çalışmıyor | Materyal ismi var sanılıp doğrulanmadan kullanılmış, texture eksik/bozuk | `awk`/`grep` ile gazebo.material script'inde texture_unit kontrolü yapın | [07](./07-cok-kamera-mimarisi-ve-parkur) |
 | Periyodik doku (CeilingTiled) stereo eşleştirmeyi bozuyor | Tekrarlayan kare desen stereo eşleştirmede çoklu yanlış eşleşmeye yol açıyor | Organik/düzensiz doku (Grass gibi) tercih edin | [07](./07-cok-kamera-mimarisi-ve-parkur), [08](./08-stereo-derinlik-point-cloud) |
+| Stereo senkronizasyonunda karelerin birbirine karışması | `ApproximateTimeSynchronizer` toleransı (slop) yanlış yapılandırılmış | 30 FPS için 5 ms (`slop=0.005` sn) tolerans kullanın | [08](./08-stereo-derinlik-point-cloud) |
 | SLAM haritası hep boş kaldı, Message Filter dropping uyarısı | Robotta URDF/robot_state_publisher yok, sensör TF ağacında yok | `static_transform_publisher` ile sensör TF'lerini yayınlayın | [09](./09-2d-slam) |
 | TF var ama SLAM haritası hâlâ boş | slam_toolbox varsayılan base_frame: base_footprint arıyor, robotta base_link var | `slam_params.yaml` içinde `base_frame: base_link` tanımlayın | [09](./09-2d-slam) |
+| `Package 'camera_vision' not found` veya launch dosyası bulunamadı | Depodaki tam `camera_vision` paketi `~/ika_ws/src` alanına bağlanmamış veya derlenmemiş | Sembolik link (`ln -s`) ile depodaki paketi bağlayıp `colcon build` çalıştırın | [10](./10-3d-haritalama-octomap) |
 | OctoMap point cloud havada/saçılmış görünüyor | Kamera optik kuralı (Z=derinlik) ile ROS gövde kuralı (X=ileri) aynı frame'de karıştırılmış | Sadece rotasyon farkı olan `camera_optical_frame` TF'i ekleyin | [10](./10-3d-haritalama-octomap) |
 | OctoMap'te "hayalet duvarlar" ve voxel kaymaları | OctoMap loop-closure'da ani sıçrama yapabilen 'map' frame'ine bağlı | OctoMap'i sürekli/kaymasız 'odom' frame'ine bağlayın | [10](./10-3d-haritalama-octomap) |
 | WSL2'de FastDDS / ROS 2 mesajlaşma kilitlenmeleri | FastDDS alt seviye taşıma/multicast sorunları | `export FASTDDS_BUILTIN_TRANSPORTS=UDPv4` ortam değişkenini ekleyin | [10](./10-3d-haritalama-octomap) |
@@ -91,6 +97,38 @@ Bu uyarı tek bir nedene bağlı değildir; aşağıdaki 4 kontrolü sırayla ya
 - **Kontrol Komutu:** `transform.header.stamp` ile `node.get_clock().now()` arasındaki farkı inceleyin.
 - **Olası Neden:** `lookup_transform(..., Time())` fonksiyonu zaman aşımı belirtilmediğinde buffer'daki son geçerli dönüşümü döndürür.
 - **Çözüm:** Dönüşüm zaman damgası mevcut zamandan 0.5 saniyeden eskiyse tag kayboldu kabul edilip robot durdurulmalıdır ([Modül 5](./05-apriltag-ile-konum-tespiti)).
+
+---
+
+### 6. Simülasyon Saati (`use_sim_time`) ve TF Zaman Damgası Uyuşmazlığı
+- **Belirti:** `tag_follower` çalışıyor, kamera AprilTag'i net şekilde görüyor, `/tf` mesajları yayınlanıyor; fakat robot "Tag verisi eski" diyerek asla hareket etmiyor.
+- **Kontrol:** Node başlatılırken `--ros-args -p use_sim_time:=true` parametresinin verilip verilmediğini kontrol edin.
+- **Olası Neden:** Gazebo zamanı 0. saniyeden başlar (simülasyon saati). Eğer ROS 2 node'u `use_sim_time` ayarlanmadan başlatılırsa, `get_clock().now()` Linux işletim sisteminin duvar saatini (1.7 milyar saniye - epoch) okur. `(now - stamp)` farkı devasa bir sayı çıkar ve watchdog mekanizması veriyi kaybolmuş varsayar.
+- **Çözüm:** Simülasyonla çalışan tüm node'lara `--ros-args -p use_sim_time:=true` argümanını verin ([Modül 5](./05-apriltag-ile-konum-tespiti), [Modül 8](./08-stereo-derinlik-point-cloud)).
+
+---
+
+### 7. Paket Oluşturmada `entry_points` Eksikliği (`No executable found`)
+- **Belirti:** `ros2 run paket_adi script_adi` komutu verildiğinde `No executable found` hatası alınır.
+- **Kontrol:** `cat ~/ika_ws/src/<paket_adi>/setup.py | grep entry_points -A 5`
+- **Olası Neden:** `ros2 pkg create --build-type ament_python` boş bir `entry_points` şablonu üretir. Python script'ini klasöre kopyalamak tek başına yeterli değildir; `setup.py` dosyasına console_script olarak kaydedilmesi gerekir.
+- **Çözüm:** `setup.py` dosyasında `entry_points` bölümüne `'script_adi = paket_adi.script_adi:main'` satırını ekleyin ve `colcon build` çalıştırın ([Modül 5](./05-apriltag-ile-konum-tespiti)).
+
+---
+
+### 8. `camera_vision` Paket Geçişi ve Çalışma Alanı Senkronizasyonu
+- **Belirti:** Modül 10'da `ros2 launch camera_vision ika_mapping.launch.py` çalıştırıldığında `Package 'camera_vision' not found` veya eklenti/filtre node'ları bulunamıyor hatası.
+- **Kontrol:** `ros2 pkg prefix camera_vision` çıktısının `~/ika_ws/install/camera_vision` gösterip göstermediğine bakın.
+- **Olası Neden:** Modül 4'te oluşturulan temel paket sadece tek bir viewer dosyası içerir. Depodaki tam teşekküllü `camera_vision` paketi ise launch, RViz konfigürasyonu, SDF robot modeli ve stereo/depth filtre node'larını barındırır.
+- **Çözüm:** Çalışma alanındaki eski paketi silip depodaki tam pakete sembolik link verin (`ln -s ~/ika_rover_egitim/camera_vision ~/ika_ws/src/camera_vision`), ardından `colcon build --packages-select camera_vision` ve `source install/setup.bash` uygulayın ([Modül 10](./10-3d-haritalama-octomap)).
+
+---
+
+### 9. MAVROS Hız Eksen Uyuşmazlığı (`LOCAL_NED` vs `BODY_NED`)
+- **Belirti:** Robot yönünü çevirdikten (örneğin doğuya döndükten) sonra verilen ileri hız komutunda ileri gitmek yerine sola/kuzeye doğru sapar.
+- **Kontrol:** `ros2 param get /mavros setpoint_velocity.mav_frame`
+- **Olası Neden:** MAVROS varsayılan olarak `LOCAL_NED` (harita kuzey-doğu-aşağı) eksenindedir. Robotun burnunun baktığı yönü takip etmesi için hız vektörünün gövde ekseninde (`BODY_NED`) yorumlanması şarttır.
+- **Çözüm:** MAVROS ayağa kalktıktan sonra `ros2 param set /mavros setpoint_velocity.mav_frame BODY_NED` komutunu verin ([Modül 6](./06-mavros-ardupilot-entegrasyonu)).
 
 ---
 

@@ -65,6 +65,10 @@ ros2 run camera_vision camera_viewer
 
 Gazebo'nun kendi 3D sahne görünümü (ızgara çizgileri, eksen okları olan) ile robotun **gerçek kamerasının gördüğü** (`cv2.imshow` ile açılan, "ika_rover kamerasi" başlıklı, düz fotoğraf gibi) pencere **farklı şeylerdir**. Kamera testlerinde her zaman ikincisine bakın — birincisi sizin kendi "tanrı gözü" bakış açınız, robotun gördüğü değil.
 
+> **💡 Mimari Not (Paketin Geleceği):**
+> Bu derste sıfırdan oluşturduğunuz temel `camera_vision` paketi, ilerleyen derslerde (Modül 8'de stereo disparity ve Modül 10'da 3D OctoMap pipeline'ı) depomuzun kök dizininde hazır olarak sunulan çok düğümlü ve launch yapılandırmalı tam teşekküllü `camera_vision` paketine genişletilecektir.
+
 ## Sırada
 
 [Modül 5: AprilTag ile Konum Tespiti](../05-apriltag-ile-konum-tespiti) — kameradan bir görsel işaretin tam 3D konumunu hesaplamayı öğreneceğiz.
+

@@ -84,17 +84,46 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 
 ## Adım Adım Çalıştırma ve Doğrulama
 
-1. **Parkuru Başlatın:**
-   ```bash
-   gazebo --verbose 07-cok-kamera-mimarisi-ve-parkur/parkur.world
-   ```
-2. **Kamera Topic'lerini Doğrulayın:**
-   ```bash
-   ros2 topic list | grep camera
-   ```
-   *Beklenen çıktı:* 5 kameranın her biri için `image_raw`, `camera_info` topic'lerinin listelenmesi.
-3. **Teleop ile Sürün:**
-   Ayrı bir terminalde `teleop_twist_keyboard` çalıştırıp robotu koridorda gezdirin.
+### 1. Parkur ve Robotun Başlatılması
+[`parkur.world`](./parkur.world) dosyası, kapalı koridor duvarlarının yanı sıra 5 kameralı İKA Rover modelini doğrudan başlangıç pozisyonunda (`(0, 0, 0.15)`) gömülü olarak içerir. Tek bir komutla hem test dünyası hem de sensörleriyle birlikte robot ayağa kalkar:
+
+```bash
+gazebo --verbose 07-cok-kamera-mimarisi-ve-parkur/parkur.world
+```
+
+> **Alternatif / Modüler Yaklaşım (Dinamik Robot Ekleme):**
+> Eğer robotu boş veya farklı bir dünyaya sonradan eklemek isterseniz, bu klasördeki bağımsız [`model.sdf`](./model.sdf) dosyasını `gazebo_ros` üzerinden spawn edebilirsiniz:
+> ```bash
+> ros2 run gazebo_ros spawn_entity.py -file 07-cok-kamera-mimarisi-ve-parkur/model.sdf -entity ika_rover -x 0.0 -y 0.0 -z 0.15
+> ```
+> *(Not: SDF içinde `<include><uri>model://ika_rover</uri></include>` kullanmak isterseniz `export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:$(pwd)/07-cok-kamera-mimarisi-ve-parkur` tanımlanmalıdır).*
+
+### 2. Kamera ve Sensör Topic'lerini Doğrulayın
+Robot parkurda açıldığında Gazebo kamera eklentileri otomatik olarak ROS 2 topic'lerini yayına başlar:
+
+```bash
+ros2 topic list | grep camera
+```
+
+*Beklenen çıktı (5 kamera x 2 topic = 10 akış):*
+- `/ika_rover/camera_sensor/image_raw` & `camera_info` (Ön-sol ana kamera)
+- `/ika_rover/right_camera_sensor/image_raw` & `camera_info` (Ön-sağ stereo eşi)
+- `/ika_rover/side_right_camera_sensor/image_raw` & `camera_info` (Sağ yan mono)
+- `/ika_rover/side_left_camera_sensor/image_raw` & `camera_info` (Sol yan mono)
+- `/ika_rover/rear_camera_sensor/image_raw` & `camera_info` (Arka mono)
+
+Ayrıca Lidar (`/scan`) ve Odometri (`/odom`) topic'lerinin de aktif olduğunu doğrulayın:
+```bash
+ros2 topic echo /odom --once
+```
+
+### 3. Teleop ile Manuel Sürüş Testi
+Ayrı bir terminalde klavye teleop aracını başlatın ve robotu koridor boyunca sürün:
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+*(Örneğin `i` tuşuna basarak robotu koridora doğru ileri sürün, `j`/`l` ile virajları dönün, `k` veya boşluk ile durdurun).*
 
 ## Sırada
 [Modül 8: Stereo Derinlik ve Point Cloud](../08-stereo-derinlik-point-cloud)

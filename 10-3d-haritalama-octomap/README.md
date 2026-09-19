@@ -70,6 +70,31 @@ Optik çerçeve düzeltmesinden sonra bile stereo nokta bulutu dokusuz yüzeyler
 
 ---
 
+## Hazır `camera_vision` Paketini Çalışma Alanına Aktarma ve Derleme
+
+Modül 4'te oluşturulan temel paket yalnızca basit renk filtreleme içeriyordu. Modül 10'da çalıştıracağımız birleşik pipeline (`ika_mapping.launch.py`), depomuzun kök dizininde yer alan tam teşekküllü [`camera_vision`](../camera_vision) paketinin derlenmiş olmasına ihtiyaç duyar.
+
+Aşağıdaki adımları sırayla uygulayarak depodaki hazır paketi ROS 2 çalışma alanınıza aktarın:
+
+```bash
+# 1. ROS 2 çalışma alanınızın kaynak dizinine geçin:
+cd ~/ika_ws/src
+
+# 2. Modül 4'teki temel paketi depodaki tam paketle güncelleyin (Sembolik Link Tavsiye Edilir):
+rm -rf camera_vision
+ln -s ~/ika_rover_egitim/camera_vision ~/ika_ws/src/camera_vision
+# (Alternatif kopyalama yöntemi: cp -r ~/ika_rover_egitim/camera_vision ~/ika_ws/src/)
+
+# 3. Bağımlılıkları derleyin:
+cd ~/ika_ws
+colcon build --symlink-install --packages-select camera_vision
+
+# 4. Ortamı yükleyin (Her yeni terminalde gereklidir):
+source install/setup.bash
+```
+
+---
+
 ## Sistem Kararlılığı ve Birleşik Launch
 
 1. **DDS Kilitlenmeleri (WSL2):** Ubuntu 22.04'te FastDDS çoklu yayın paketlerinin kilitlenmesini önlemek için:
@@ -77,11 +102,17 @@ Optik çerçeve düzeltmesinden sonra bile stereo nokta bulutu dokusuz yüzeyler
    export FASTDDS_BUILTIN_TRANSPORTS=UDPv4
    ```
 2. **Kalıcı TF Launch'ı:** Tüm statik dönüşümler `sensor_tf.launch.py` içine taşındı.
-3. **Tek Komutla Haritalama:**
+3. **Tek Komutla Tam Haritalama Pipeline'ı:**
    ```bash
    ros2 launch camera_vision ika_mapping.launch.py
    ```
-   Bu launch dosyası Gazebo'yu, sensör TF'lerini, `slam_toolbox`'ı, derinlik filtresini, `octomap_server`'ı ve RViz2'yi tek hamlede ayağa kaldırır.
+   Bu launch dosyası aşağıdaki tüm bileşenleri tek komutla ayağa kaldırır:
+   - Gazebo simülasyonu (`ika_rover.world` dünyası ve 5 kameralı robot)
+   - Sensör ve optik çerçeve TF yayınları (`sensor_tf.launch.py`)
+   - 2D Lidar SLAM motoru (`slam_toolbox`)
+   - Zemin/tavan engel filtresi (`depth_cloud_filter`)
+   - 3B Voxel haritalama sunucusu (`octomap_server`)
+   - Önceden yapılandırılmış görselleştirme arayüzü (`rviz2`)
 
 ---
 
