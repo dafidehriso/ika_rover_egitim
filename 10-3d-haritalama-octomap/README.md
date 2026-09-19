@@ -83,7 +83,7 @@ cd ~/ika_ws/src
 # 2. Öğrencinin Modül 4'teki önceki çalışmalarını korumak için mevcut paketi ROS çalışma alanı DIŞINA benzersiz bir yedek dizinine taşıyın:
 # (ÖNEMLİ: Paket ROS workspace içinde bırakılırsa colcon aynı isimde çift paket algılayıp çakışma hatası verir)
 mkdir -p ~/ika_backups
-if [ -e "camera_vision" ]; then
+if [ -e camera_vision ] || [ -L camera_vision ]; then
     mv camera_vision ~/ika_backups/camera_vision_backup_$(date +%Y%m%d_%H%M%S)
 fi
 
@@ -91,7 +91,7 @@ fi
 ln -s ~/ika_rover_egitim/camera_vision ~/ika_ws/src/camera_vision
 # (Alternatif kopyalama yöntemi: cp -r ~/ika_rover_egitim/camera_vision ~/ika_ws/src/)
 
-# 3. Bağımlılıkları derleyin:
+# 4. Bağımlılıkları derleyin:
 cd ~/ika_ws
 colcon build --symlink-install --packages-select camera_vision
 

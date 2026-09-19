@@ -61,7 +61,7 @@ Modül 4'te oluşturduğunuz temel `camera_vision` paketi yerine, bu depoda haz�
 # (ÖNEMLİ: Paket ROS workspace içinde bırakılırsa colcon aynı isimde çift paket algılayıp çakışma hatası verir)
 cd ~/ika_ws/src
 mkdir -p ~/ika_backups
-if [ -e "camera_vision" ]; then
+if [ -e camera_vision ] || [ -L camera_vision ]; then
     mv camera_vision ~/ika_backups/camera_vision_backup_$(date +%Y%m%d_%H%M%S)
 fi
 

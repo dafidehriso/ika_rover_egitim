@@ -95,7 +95,11 @@ ros2 service call /mavros/set_mode mavros_msgs/srv/SetMode "{custom_mode: 'GUIDE
 ros2 service call /mavros/cmd/arming mavros_msgs/srv/CommandBool "{value: true}"
 
 # 3. ⚠️ KRİTİK EKSEN AYARI: Hız komutlarını robotun gövde eksenine (BODY_NED) bağlayın
-# MAVROS ROS 2 mimarisinde setpoint_velocity eklentisi '/mavros/setpoint_velocity' düğümü olarak çalışır.
+# Öncelikle çalışan sistemde setpoint_velocity eklenti düğümünün adını listeleyip doğrulayın:
+ros2 node list | grep setpoint_velocity
+# Beklenen çıktı: /mavros/setpoint_velocity (veya yapılandırmaya göre /setpoint_velocity)
+
+# MAVROS ROS 2 mimarisinde setpoint_velocity eklentisi bu düğüm adı altında çalışır.
 # Kaynak kodunda (setpoint_velocity.cpp) görüleceği üzere callback header.frame_id'yi dikkate almaz;
 # koordinat dönüşümünü doğrudan düğümün 'mav_frame' parametresi belirler.
 # (Bu ayar yapılmazsa varsayılan LOCAL_NED kullanılır ve robot döndükten sonra ileri komutunda kuzeye kayar)
